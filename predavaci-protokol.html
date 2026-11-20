@@ -324,8 +324,12 @@ $('jl').onclick=async e=>{
       photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);
       if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;
       const pdfObj=await buildPdf(false);
-      const nm='Protokol-'+(j.k&&(j.k.zakazka||j.k.datum)||j.t||'TURTO').replace(/[^\w-]+/g,'_')+'.pdf';
-      pdfObj.save(nm);
+      const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
+      const firma=j.k&&j.k.firma||'';
+      const akce=j.k&&j.k.akce||'';
+      const nm=[datum,firma,akce].filter(Boolean).join(' - ').replace(/[/\\:*?"<>|]+/g,'').trim()||'Protokol';
+      const nmFinal=nm.slice(0,100)+'.pdf';
+      pdfObj.save(nmFinal);
       // Obnov původní stav
       jid=savedJid;
       K.forEach(el=>el.value=savedK[el.dataset.k]||'');
