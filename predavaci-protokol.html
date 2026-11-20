@@ -113,6 +113,10 @@ canvas.sg{width:100%;height:170px;border:1px dashed var(--mu);border-radius:6px;
 
 <section class="sec" id="s5"><h2>Práce</h2>
 <div class="opt" style="margin-bottom:12px"><label><input type="checkbox" id="pr2">Poslat zákazníkovi i ceny (jinak jen množství)</label></div>
+<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid var(--ln)">
+  <button class="b" id="ptab-pvc" onclick="setPraceTab('pvc')" style="border-radius:6px 6px 0 0;border-bottom:none;margin-bottom:-2px;padding:8px 18px">PVC pásy</button>
+  <button class="b" id="ptab-inj" onclick="setPraceTab('inj')" style="border-radius:6px 6px 0 0;border-bottom:none;margin-bottom:-2px;padding:8px 18px;margin-left:4px">Injektáže</button>
+</div>
 <input id="fp" placeholder="Hledat v pracích…"><div id="items-prace"></div>
 <div class="bar"><button class="b s" id="addc-prace">+ Vlastní položka</button></div><div style="display:flex;align-items:center;gap:8px;margin:8px 0 0 0;padding:0 4px"><label style="font-size:.85em;white-space:nowrap">Sleva na práce (bez Dopravy):</label><input type="number" id="sleva-prace" min="0" max="100" step="1" value="0" style="width:70px;padding:4px 6px;border:1px solid #555;border-radius:4px;background:#2a2a2a;color:#fff;font-size:.9em"> <span style="font-size:.85em">%</span></div><div class="tot" id="tot-prace"></div></section>
 
