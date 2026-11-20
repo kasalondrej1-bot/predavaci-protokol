@@ -306,7 +306,25 @@ $('js').onclick=async()=>{commit();const k={};K.forEach(e=>k[e.dataset.k]=e.valu
 $('jo').onclick=()=>{const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=J.length?J.map(x=>`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b s" data-pdf="${x.id}" style="white-space:nowrap">⬇ PDF</button><button class="b l" data-x="${x.id}">Smazat</button></div>`).join(''):'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>'};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();drawPrace();dph()}
 async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();drawPrace();dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
-$('jl').onclick=e=>{const x=e.target.closest('[data-x]');if(x){if(x.dataset.arm!='1'){x.dataset.arm='1';x.textContent='Opravdu smazat?';return}try{const nJ=JS().filter(j=>j.id!=x.dataset.x);localStorage.setItem('turtoJobs',JSON.stringify(nJ));J=nJ;sbDelete(x.dataset.x);idb.del(x.dataset.x)}catch(er){}if(jid==x.dataset.x)jid=null;$('jo').onclick();$('jo').onclick();return}const o=e.target.closest('[data-o]');if(!o)return;const j=JS().find(z=>z.id==o.dataset.o);if(j)loadJ(j)};
+$('jl').onclick=async e=>{
+  const pdf=e.target.closest('[data-pdf]');
+  if(pdf){
+    const j=JS().find(z=>z.id==pdf.dataset.pdf);
+    if(!j)return;
+    const prevJ=jid,prevK={};K.forEach(el=>prevK[el.dataset.k]=el.value);
+    await loadJ(j);
+    pdf.textContent='⏳ Generuji…';pdf.disabled=true;
+    try{
+      const pdfObj=await buildPdf(false);
+      const nm='Protokol-'+(j.k&&j.k.zakazka||j.k&&j.k.datum||j.t||'TURTO').replace(/[^\w-]+/g,'_')+'.pdf';
+      pdfObj.save(nm);
+    }catch(er){alert('Chyba PDF: '+er.message);}
+    pdf.textContent='⬇ PDF';pdf.disabled=false;
+    return;
+  }
+  const x=e.target.closest('[data-x]');if(x){if(x.dataset.arm!='1'){x.dataset.arm='1';x.textContent='Opravdu smazat?';return}try{const nJ=JS().filter(j=>j.id!=x.dataset.x);localStorage.setItem('turtoJobs',JSON.stringify(nJ));J=nJ;sbDelete(x.dataset.x);idb.del(x.dataset.x)}catch(er){}if(jid==x.dataset.x)jid=null;$('jo').onclick();$('jo').onclick();return}
+  const o=e.target.closest('[data-o]');if(!o)return;const j=JS().find(z=>z.id==o.dataset.o);if(j)loadJ(j);
+};
 $('jn').onclick=()=>{rst();jid=null;$('jl').style.display='none';jmsg('Nová zakázka');go(0)};
 /* PDF */
 const fd=s=>s?s.split('-').reverse().map(Number).join('. '):'';
