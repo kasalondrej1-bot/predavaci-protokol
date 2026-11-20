@@ -303,7 +303,31 @@ document.getElementById('inp_kontakt').addEventListener('change',e=>{const val=e
 })();
 function renderJL(){const l=$('jl');if(l.style.display=='block'){l.innerHTML=J.length?J.map(x=>`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b l" data-x="${x.id}">Smazat</button></div>`).join(''):'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>'}}
 $('js').onclick=async()=>{commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J))}catch(e){jmsg('Uložení se nepovedlo.');return}await idb.save(oid,photos);sbSave(o,photos).then(ok=>jmsg(ok?'Uloženo a synchronizováno: '+t:'Uloženo lokálně: '+t+' (bez připojení)')).catch(()=>jmsg('Uloženo lokálně: '+t))};
-$('jo').onclick=()=>{const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=J.length?J.map(x=>`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b s" data-pdf="${x.id}" style="white-space:nowrap">⬇ PDF</button><button class="b l" data-x="${x.id}">Smazat</button></div>`).join(''):'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>'};
+function renderJobList(){
+  const sorted=[...J].sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});
+  if(!sorted.length)return'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>';
+  const mesice=['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
+  const groups=new Map();
+  sorted.forEach(x=>{
+    const d=x.k&&x.k.datum;
+    const key=d?d.slice(0,7):'0000-00';
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(x);
+  });
+  let html='';
+  groups.forEach((items,key)=>{
+    const [yr,mo]=key.split('-');
+    const label=key==='0000-00'?'Bez data':`${mesice[+mo-1]||mo} ${yr}`;
+    const open=key===([...groups.keys()][0]);
+    html+=`<details${open?' open':''} style="margin-bottom:8px"><summary style="cursor:pointer;padding:8px 14px;background:var(--nav);border-radius:8px;font-weight:600;list-style:none;display:flex;justify-content:space-between"><span>${label}</span><span style="font-weight:400;opacity:.6">${items.length} zakázek</span></summary><div style="margin-top:4px">`;
+    items.forEach(x=>{
+      html+=`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b s" data-pdf="${x.id}" style="white-space:nowrap">⬇ PDF</button><button class="b l" data-x="${x.id}">Smazat</button></div>`;
+    });
+    html+='</div></details>';
+  });
+  return html;
+}
+$('jo').onclick=()=>{const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();drawPrace();dph()}
 async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();drawPrace();dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
 $('jl').onclick=async e=>{
@@ -339,7 +363,7 @@ $('jl').onclick=async e=>{
     pdf.textContent='⬇ PDF';pdf.disabled=false;
     return;
   }
-  const x=e.target.closest('[data-x]');if(x){if(x.dataset.arm!='1'){x.dataset.arm='1';x.textContent='Opravdu smazat?';return}try{const nJ=JS().filter(j=>j.id!=x.dataset.x);localStorage.setItem('turtoJobs',JSON.stringify(nJ));J=nJ;sbDelete(x.dataset.x);idb.del(x.dataset.x)}catch(er){}if(jid==x.dataset.x)jid=null;$('jo').onclick();$('jo').onclick();return}
+  const x=e.target.closest('[data-x]');if(x){if(x.dataset.arm!='1'){x.dataset.arm='1';x.textContent='Opravdu smazat?';return}try{const nJ=JS().filter(j=>j.id!=x.dataset.x);localStorage.setItem('turtoJobs',JSON.stringify(nJ));J=nJ;sbDelete(x.dataset.x);idb.del(x.dataset.x)}catch(er){}if(jid==x.dataset.x)jid=null;$('jl').innerHTML=renderJobList();return}
   const o=e.target.closest('[data-o]');if(!o)return;const j=J.find(z=>z.id==o.dataset.o)||JS().find(z=>z.id==o.dataset.o);if(j)await loadJ(j);
 };
 $('jn').onclick=()=>{rst();jid=null;$('jl').style.display='none';jmsg('Nová zakázka');go(0)};
