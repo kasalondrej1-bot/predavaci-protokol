@@ -347,7 +347,7 @@ $('jl').onclick=async e=>{
       selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];
       photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);
       if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;
-      const pdfObj=await buildPdf(false);
+      const pdfObj=await buildPdf(!!(j.pr||j.pr2));
       const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
       const firma=j.k&&j.k.firma||'';
       const akce=j.k&&j.k.akce||'';
