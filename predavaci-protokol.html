@@ -310,7 +310,7 @@ $('jl').onclick=async e=>{
   const pdf=e.target.closest('[data-pdf]');
   if(pdf){
     const jId=pdf.dataset.pdf;
-    const j=JS().find(z=>z.id==jId);
+    const j=J.find(z=>z.id==jId)||JS().find(z=>z.id==jId);
     if(!j)return;
     pdf.textContent='⏳…';pdf.disabled=true;
     try{
@@ -336,7 +336,7 @@ $('jl').onclick=async e=>{
     return;
   }
   const x=e.target.closest('[data-x]');if(x){if(x.dataset.arm!='1'){x.dataset.arm='1';x.textContent='Opravdu smazat?';return}try{const nJ=JS().filter(j=>j.id!=x.dataset.x);localStorage.setItem('turtoJobs',JSON.stringify(nJ));J=nJ;sbDelete(x.dataset.x);idb.del(x.dataset.x)}catch(er){}if(jid==x.dataset.x)jid=null;$('jo').onclick();$('jo').onclick();return}
-  const o=e.target.closest('[data-o]');if(!o)return;const j=JS().find(z=>z.id==o.dataset.o);if(j)await loadJ(j);
+  const o=e.target.closest('[data-o]');if(!o)return;const j=J.find(z=>z.id==o.dataset.o)||JS().find(z=>z.id==o.dataset.o);if(j)await loadJ(j);
 };
 $('jn').onclick=()=>{rst();jid=null;$('jl').style.display='none';jmsg('Nová zakázka');go(0)};
 /* PDF */
