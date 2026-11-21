@@ -27,6 +27,7 @@ button.s{background:var(--navy)}button.l{background:none;color:var(--mu);border:
 .it{display:grid;grid-template-columns:34px 1fr 74px 52px 92px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ln)}
 .it input[type=checkbox]{width:26px;height:26px;padding:0}.it input[type=number]{padding:8px}.it small{display:block;color:var(--mu);font-size:12px}
 .it.off .q,.it.off .p{opacity:.35}.tot{font-size:20px;font-weight:700;text-align:right;margin-top:12px}
+body.role-prace .it .p{display:none!important}body.role-prace .tot{display:none!important}body.role-prace #jo,body.role-prace #jl{display:none!important}
 @media(max-width:600px){.it{grid-template-columns:30px 1fr 64px 80px}.it .u{display:none}}
 .ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}.ph div{border:1px solid var(--ln);border-radius:6px;padding:8px}.ph img{width:100%;height:130px;object-fit:cover;border-radius:4px}
 canvas.sg{width:100%;height:170px;border:1px dashed var(--mu);border-radius:6px;background:#fff;touch-action:none}
@@ -357,11 +358,88 @@ function renderJobList(){
     items.forEach(x=>{
       html+=`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b s" data-pdf="${x.id}" data-ceny="0" style="white-space:nowrap">⬇ PDF</button><button class="b s" data-pdf="${x.id}" data-ceny="1" style="white-space:nowrap;background:#2a5a2a">⬇ +ceny</button><button class="b s" data-zuct="${x.id}" style="white-space:nowrap;background:#3a3a6a">⬇ Zúčt.</button><button class="b l" data-x="${x.id}">Smazat</button></div>`;
     });
+    // Souhrnná tabulka měsíce
+    const PVC_C=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
+    const INJ_C=['Injektáže'];
+    const DOP_C='Doprava a vícenáklady';
+    const CEN_C='Centrála';
+    let mesRows='';
+    let sumCena=0,sumO70bez=0,sumO70dop=0,sumT30bez=0,sumDop=0,sumCelkBez=0;
+    items.forEach(zak=>{
+      const selP=zak.selPrace||{};
+      const custP=zak.custPrace||[];
+      const slvP=(zak.slevaP||0)/100;
+      const prAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((_,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
+      let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,cenJa=0;
+      prAll.forEach(x=>{
+        const val=(+x.q||0)*(+x.p||0);
+        const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
+        cena+=vs;
+        if(x.s===DOP_C)dopJa+=vs;
+        else if(x.s===CEN_C)cenJa+=vs;
+        else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
+        else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
+      });
+      const o70bez=pvcJa+injJa+cenJa;
+      const o70dop=o70bez+dopJa;
+      const t30bez=pvcT+injT;
+      const celkBez=o70bez+t30bez+cenJa;
+      sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumCelkBez+=celkBez;
+      const datum=zak.k&&zak.k.datum?zak.k.datum.split('-').reverse().slice(0,2).join('.'):'-';
+      const zakaznik=zak.k&&zak.k.firma||'-';
+      const stavba=zak.k&&zak.k.akce||zak.t||'-';
+      const auto=zak.k&&zak.k.auto||'O,CH,H';
+      mesRows+=`<tr style="border-bottom:1px solid #ccc">
+        <td style="padding:3px 6px">${datum}</td>
+        <td style="padding:3px 6px">${esc(zakaznik)}</td>
+        <td style="padding:3px 6px">${esc(stavba)}</td>
+        <td style="padding:3px 6px;text-align:right;background:#bbdefb">${cena>0?cz(cena)+' Kč':'-'}</td>
+        <td style="padding:3px 6px;text-align:right">${o70bez>0?cz(o70bez)+' Kč':'-'}</td>
+        <td style="padding:3px 6px;text-align:right;background:#fff176">${o70dop>0?cz(o70dop)+' Kč':'-'}</td>
+        <td style="padding:3px 6px;text-align:right">${t30bez>0?cz(t30bez)+' Kč':'-'}</td>
+        <td style="padding:3px 6px;text-align:right;background:#bbdefb">${dopJa>0?cz(dopJa)+' Kč':'-'}</td>
+        <td style="padding:3px 6px;text-align:right;background:#bbdefb">${auto}</td>
+        <td style="padding:3px 6px;text-align:right">${celkBez>0?cz(celkBez)+' Kč':'-'}</td>
+      </tr>`;
+    });
+    if(getRole()!=='prace'){html+=`<div style="overflow-x:auto;margin:8px 0 4px"><table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;background:#fff;color:#111">
+      <thead><tr style="background:#1565c0;color:#fff;font-weight:bold">
+        <th style="padding:4px 6px;text-align:left">Datum</th>
+        <th style="padding:4px 6px;text-align:left">Zákazník</th>
+        <th style="padding:4px 6px;text-align:left">Stavba</th>
+        <th style="padding:4px 6px;text-align:right;background:#1565c0">Cena celkem</th>
+        <th style="padding:4px 6px;text-align:right">Ondra 70%<br>bez dopravy</th>
+        <th style="padding:4px 6px;text-align:right;background:#f9a825;color:#111">Ondra 70%<br>+ doprava</th>
+        <th style="padding:4px 6px;text-align:right">TURTO 30%<br>bez dopravy</th>
+        <th style="padding:4px 6px;text-align:right;background:#1565c0">Doprava</th>
+        <th style="padding:4px 6px;text-align:right;background:#1565c0">Auto</th>
+        <th style="padding:4px 6px;text-align:right">Celkem<br>bez dopravy</th>
+      </tr></thead>
+      <tbody>${mesRows}</tbody>
+      <tfoot>
+        <tr style="font-weight:bold;background:#e3f2fd">
+          <td colspan="3" style="padding:4px 6px">cena celkem</td>
+          <td style="padding:4px 6px;text-align:right;background:#bbdefb">${cz(sumCena)} Kč</td>
+          <td style="padding:4px 6px;text-align:right">${cz(sumO70bez)} Kč</td>
+          <td style="padding:4px 6px;text-align:right;background:#fff176;color:#111">${cz(sumO70dop)} Kč</td>
+          <td style="padding:4px 6px;text-align:right">${cz(sumT30bez)} Kč</td>
+          <td style="padding:4px 6px;text-align:right;background:#bbdefb">${cz(sumDop)} Kč</td>
+          <td style="padding:4px 6px;background:#bbdefb"></td>
+          <td style="padding:4px 6px;text-align:right">${cz(sumCelkBez)} Kč</td>
+        </tr>
+        ${getRole()!=='turto'?`<tr>
+          <td colspan="5" style="padding:4px 6px"></td>
+          <td style="padding:6px;text-align:center;font-weight:bold;background:#c62828;color:#fff">K fakturaci<br>ONDRA</td>
+          <td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM HOD: ${cz(sumO70bez+sumT30bez)} Kč</td>
+        </tr>`:''}
+      </tfoot>
+    </table></div>`;
+    } // end role check
     html+='</div></details>';
   });
   return html;
 }
-$('jo').onclick=()=>{const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
+$('jo').onclick=()=>{if(getRole()==='prace')return;const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
 async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
 $('jl').onclick=async e=>{
@@ -431,11 +509,53 @@ P.push(pg(`<div class="dod-wrap"><div class="dod-col"><div class="dod-hd">DODAVA
 <h4>Provedené práce a stav při odjezdu</h4><div>${ck(['Provedeno v plánovaném rozsahu','Provedeno částečně','Neprovedeno'],rv('done'))}</div>${R('Počasí / teplota:',V('pocasi'))}
 <div style="color:#8a97a8;margin:8px 0 2px">Co, kde a v jakém množství bylo provedeno / důvod neprovedení:</div><div class="tx" style="height:190px;overflow:hidden">${esc(V('popis'))}${hasI?'\n(Soupis prací a materiálu viz následující strana.)':''}</div>
 <div style="color:#8a97a8;margin:8px 0 2px">Zbývající práce / závady / podmínky pokračování:</div><div class="tx">${esc(V('zbyva'))}</div>`));
-if(hasI){const t=L.reduce((a,x)=>a+x.q*x.p,0);for(let i=0;i<L.length;i+=17){const c=L.slice(i,i+17),last=i+17>=L.length;P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${c.map(x=>`<tr><td>${esc(x.n)}</td><td class="n">${esc(x.u)}</td><td class="n">${fm(x.q)}</td>${PR?`<td class="n">${fm(x.p)} Kč</td><td class="n">${fm(x.q*x.p)} Kč</td>`:''}</tr>`).join('')}</tbody>${last&&PR?`<tfoot><tr><td colspan="4" class="n">Cena celkem bez DPH</td><td class="n">${fm(t)} Kč</td></tr></tfoot>`:''}</table>`))}}
+if(hasI){const t=L.reduce((a,x)=>a+x.q*x.p,0);for(let i=0;i<L.length;i+=17){const c=L.slice(i,i+17),last=i+17>=L.length;const zuct=last&&PR?buildZuctovaniHtml(null):'';P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${c.map(x=>`<tr><td>${esc(x.n)}</td><td class="n">${esc(x.u)}</td><td class="n">${fm(x.q)}</td>${PR?`<td class="n">${fm(x.p)} Kč</td><td class="n">${fm(x.q*x.p)} Kč</td>`:''}</tr>`).join('')}</tbody>${last&&PR?`<tfoot><tr><td colspan="4" class="n">Cena celkem bez DPH</td><td class="n">${fm(t)} Kč</td></tr></tfoot>`:''}</table>${zuct}`))}}
 const n=Math.max(1,Math.ceil(photos.length/4));
 for(let j=0;j<n;j++){const c=photos.slice(j*4,j*4+4),last=j==n-1;
 P.push(pg(`<h4 style="margin-top:0">Fotodokumentace montáže</h4><div class="fg">${[0,1,2,3].map(k=>{const p=c[k];return p?`<div class="c"><div class="img-wrap"><img src="${p.s}"></div><div class="cap" style="height:auto;line-height:1.3">Foto ${j*4+k+1}: ${esc(p.t)||'–'}</div></div>`:`<div class="c"><div class="ph-empty"></div></div>`}).join('')}</div>`+(last?`<h4>Potvrzení obsahu protokolu</h4><div style="color:#8a97a8">Podpisy potvrzují záznam daného dne včetně výhrad a fotografií. Počet fotografií: ${photos.length}</div>${R('Akce / číslo zakázky:',[V('akce'),V('zakazka')].filter(Boolean).join(' / '))}${R('Datum montáže:',fd(V('datum')))}<div class="two"><div><b>Za TURTO / dodavatele</b>${R('Jméno:',V('jmT'))}${R('Datum:',fd(V('datum')))}<div class="r"><b>Podpis:</b><span style="height:60px">${sg[0]?`<img src="${sg[0]}" style="height:56px">`:''}</span></div></div><div><b>Za objednatele</b>${R('Jméno a firma:',V('jmO'))}${R('Datum:',fd(V('datum')))}<div class="r"><b>Podpis:</b><span style="height:60px">${sg[1]?`<img src="${sg[1]}" style="height:56px">`:''}</span></div></div></div>`:'')))}
 return P}
+function buildZuctovaniHtml(j){
+  // Vypočítat zúčtování pro aktuální formulář nebo uloženou zakázku
+  const selP=j?j.selPrace||{}:selPrace;
+  const custP=j?j.custPrace||[]:custPrace;
+  const slvP=j?(j.slevaP||0)/100:(+($('sleva-prace')&&$('sleva-prace').value)||0)/100;
+  const prAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((x,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
+  const PVC_C=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
+  const INJ_C=['Injektáže'];
+  const DOP_C='Doprava a vícenáklady';
+  const CEN_C='Centrála';
+  let pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,cenJa=0;
+  prAll.forEach(x=>{
+    const val=(+x.q||0)*(+x.p||0);
+    const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
+    if(x.s===DOP_C)dopJa+=vs;
+    else if(x.s===CEN_C)cenJa+=vs;
+    else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
+    else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
+  });
+  const ondra=pvcJa+injJa+dopJa+cenJa;
+  const turto=pvcT+injT;
+  const datum=j?j.k&&j.k.datum||'':V('datum');
+  const firma=j?j.k&&j.k.firma||'':V('firma');
+  const akce=j?j.k&&j.k.akce||'':V('akce');
+  const zakazka=j?j.k&&j.k.zakazka||'':V('zakazka');
+  const hdr=[datum?datum.split('-').reverse().join('.'):'',firma,akce,zakazka?'č. '+zakazka:''].filter(Boolean).join(' · ');
+  const rows=[];
+  if(pvcJa>0||pvcT>0)rows.push(`<tr><td style="padding:4px 8px;border-bottom:1px solid #ddd">PVC pásy — práce (70 % Ondra / 30 % Turto)</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(pvcJa)} Kč</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(pvcT)} Kč</td></tr>`);
+  if(injJa>0||injT>0)rows.push(`<tr><td style="padding:4px 8px;border-bottom:1px solid #ddd">Injektáže — práce (50 % / 50 %)</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(injJa)} Kč</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(injT)} Kč</td></tr>`);
+  if(dopJa>0)rows.push(`<tr><td style="padding:4px 8px;border-bottom:1px solid #ddd">Doprava a vícenáklady (100 % Ondra)</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(dopJa)} Kč</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">–</td></tr>`);
+  if(cenJa>0)rows.push(`<tr><td style="padding:4px 8px;border-bottom:1px solid #ddd">Centrála (100 % Ondra)</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">${cz(cenJa)} Kč</td><td style="text-align:right;padding:4px 8px;border-bottom:1px solid #ddd">–</td></tr>`);
+  return `<div style="margin-top:24px;border-top:2px solid #333;padding-top:16px">
+    <div style="font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Rozdělení zisku</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#eee"><th style="text-align:left;padding:5px 8px">Položka</th><th style="text-align:right;padding:5px 8px">Ondra</th><th style="text-align:right;padding:5px 8px">Turto</th></tr></thead>
+      <tbody>${rows.join('')}</tbody>
+      <tfoot><tr style="background:#333;color:#fff;font-weight:bold"><td style="padding:6px 8px">CELKEM bez DPH</td><td style="text-align:right;padding:6px 8px">${cz(ondra)} Kč</td><td style="text-align:right;padding:6px 8px">${cz(turto)} Kč</td></tr></tfoot>
+    </table>
+    <div style="margin-top:6px;font-size:10px;color:#888">* Ceny bez DPH${slvP>0?' · Sleva na práce: '+(slvP*100).toFixed(0)+'%':''}</div>
+  </div>`;
+}
+
 async function buildPdf(withPrices){
   const sg=['sgT','sgO'].map(i=>$(i).has?$(i).toDataURL('image/png'):'');
   if(mySig()&&$('usig').checked)sg[0]=mySig();
@@ -450,63 +570,15 @@ async function buildPdf(withPrices){
     if(i)pdf.addPage();
     pdf.addImage(c.toDataURL('image/jpeg',1.0),'JPEG',0,0,210,297);
   }
+
   st.innerHTML='';
   return pdf;
 }
 
 async function buildZuctovani(j){
-  // Načti položky zakázky
-  const selP=j?j.selPrace||{}:selPrace;
-  const custP=j?j.custPrace||[]:custPrace;
-  const slevaP=j?(j.slevaP||0)/100:(+($('sleva-prace')&&$('sleva-prace').value)||0)/100;
-  const praceAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((x,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
-
-  const PVC_CATS=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
-  const INJ_CATS=['Injektáže'];
-  const DOPRAVA_CAT='Doprava a vícenáklady';
-  const CENTRALA_CAT='Centrála';
-
-  let pvcJa=0,pvcTurto=0,injJa=0,injTurto=0,dopravaJa=0,centralaJa=0;
-
-  praceAll.forEach(x=>{
-    const val=(+x.q||0)*(+x.p||0);
-    const valSlevy=x.s===DOPRAVA_CAT||x.s===CENTRALA_CAT?val:val*(1-slevaP);
-    if(x.s===DOPRAVA_CAT){dopravaJa+=valSlevy;}
-    else if(x.s===CENTRALA_CAT){centralaJa+=valSlevy;}
-    else if(PVC_CATS.includes(x.s)){pvcJa+=valSlevy*0.7;pvcTurto+=valSlevy*0.3;}
-    else if(INJ_CATS.includes(x.s)){injJa+=valSlevy*0.5;injTurto+=valSlevy*0.5;}
-  });
-
-  const celkemJa=pvcJa+injJa+dopravaJa+centralaJa;
-  const celkemTurto=pvcTurto+injTurto;
-
-  const datum=j?j.k&&j.k.datum||'':V('datum');
-  const firma=j?j.k&&j.k.firma||'':V('firma');
-  const akce=j?j.k&&j.k.akce||'':V('akce');
-  const zakazka=j?j.k&&j.k.zakazka||'':V('zakazka');
-
-  const html=`<div style="font-family:Arial,sans-serif;padding:30px;max-width:800px;color:#111">
-    <h2 style="margin-bottom:4px">ZÚČTOVÁNÍ ZAKÁZKY</h2>
-    <div style="color:#666;margin-bottom:20px">${[datum?datum.split('-').reverse().join('.'):'',firma,akce,zakazka?'č. '+zakazka:''].filter(Boolean).join(' · ')}</div>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <thead><tr style="background:#eee"><th style="text-align:left;padding:8px">Položka</th><th style="text-align:right;padding:8px">Ondřej</th><th style="text-align:right;padding:8px">TURTO</th></tr></thead>
-      <tbody>
-        <tr><td style="padding:8px;border-bottom:1px solid #ddd">PVC pásy (70% / 30%)</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(pvcJa)} Kč</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(pvcTurto)} Kč</td></tr>
-        <tr><td style="padding:8px;border-bottom:1px solid #ddd">Injektáže (50% / 50%)</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(injJa)} Kč</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(injTurto)} Kč</td></tr>
-        <tr><td style="padding:8px;border-bottom:1px solid #ddd">Doprava a vícenáklady (100% Ondřej)</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(dopravaJa)} Kč</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">–</td></tr>
-        <tr><td style="padding:8px;border-bottom:1px solid #ddd">Centrála (100% Ondřej)</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">${cz(centralaJa)} Kč</td><td style="text-align:right;padding:8px;border-bottom:1px solid #ddd">–</td></tr>
-      </tbody>
-      <tfoot>
-        <tr style="background:#f5f5f5;font-weight:bold"><td style="padding:10px">CELKEM bez DPH</td><td style="text-align:right;padding:10px;font-size:16px">${cz(celkemJa)} Kč</td><td style="text-align:right;padding:10px;font-size:16px">${cz(celkemTurto)} Kč</td></tr>
-      </tfoot>
-    </table>
-    <div style="margin-top:16px;color:#666;font-size:12px">* Ceny jsou bez DPH${slevaP>0?' · Sleva na práce: '+(slevaP*100).toFixed(0)+'%':''}</div>
-  </div>`;
-
-  const st=$('stage');
   const div=document.createElement('div');
-  div.style.cssText='width:794px;min-height:1123px;background:#fff;position:absolute;left:-9999px';
-  div.innerHTML=html;
+  div.style.cssText='position:absolute;left:-9999px;top:0';
+  div.innerHTML=buildZuctovaniHtml(j);
   document.body.appendChild(div);
   const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});
   const c=await html2canvas(div,{scale:3,backgroundColor:'#fff',useCORS:true,logging:false});
@@ -593,12 +665,39 @@ catch(e){o.innerHTML='Nepodařilo se vytvořit PDF: '+esc(e.message);o.style.dis
 b.disabled=false;b.textContent='Vytvořit PDF'};
 emailjs.init({publicKey:'AU1iJ2h3qmsmwUss0'});
 /* --- ZAMČENÍ --- */
-const HESLO='turto2025';
+// Hesla a úrovně přístupu
+// role 'ondra' = vše, 'turto' = vše kromě tabulky zisku, 'prace' = bez cen a bez uložených zakázek
+const HESLA={'22082009':'ondra','LuckaTurto':'turto','TurtoPrace':'prace'};
+let _role='';
+function getRole(){return _role||sessionStorage.getItem('tu_role')||'';}
+function applyRole(role){
+  _role=role;
+  // Záložka uložených zakázek
+  const joBtn=document.querySelector('nav button[onclick*="jo"]')||[...document.querySelectorAll('nav button')].find(b=>b.textContent.includes('Uložené'));
+  // Skrýt tlačítko Uložené zakázky pro roli prace
+  if(joBtn)joBtn.style.display=role==='prace'?'none':'';
+  // Also hide jl div
+  const jlDiv=$('jl');if(jlDiv&&role==='prace')jlDiv.style.display='none';
+  // Skrýt ceny v materiálech a pracích pro roli prace
+  // Apply body class for CSS-based role hiding
+  document.body.classList.toggle('role-prace',role==='prace');
+  document.body.classList.toggle('role-turto',role==='turto');
+  document.body.classList.toggle('role-ondra',role==='ondra');
+}
 const lk=document.getElementById('lock');
 const pinI=document.getElementById('pin');
 const lerr=document.getElementById('lerr');
-function unlock(h){if(h===HESLO){lk.style.display='none';try{sessionStorage.setItem('tu','1')}catch(e){}}else{lerr.textContent='Špatné heslo, zkuste znovu.';pinI.value='';pinI.focus()}}
-if(sessionStorage.getItem('tu')==='1'){lk.style.display='none';}
+function unlock(h){
+  const role=HESLA[h];
+  if(role){
+    lk.style.display='none';
+    _role=role;
+    try{sessionStorage.setItem('tu','1');sessionStorage.setItem('tu_role',role);}catch(e){}
+    applyRole(role);
+  }else{lerr.textContent='Špatné heslo, zkuste znovu.';pinI.value='';pinI.focus();}
+}
+const savedRole=sessionStorage.getItem('tu_role');
+if(sessionStorage.getItem('tu')==='1'&&savedRole){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
 document.getElementById('unlockBtn').onclick=()=>unlock(pinI.value);
 pinI.onkeydown=e=>{if(e.key==='Enter')unlock(pinI.value)};
 setTimeout(()=>{if(lk.style.display!=='none')pinI.focus()},100);
