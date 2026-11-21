@@ -232,7 +232,7 @@ function tot(){
   const tMat=[...D_mat.map((x,i)=>({...x,...(selMat[i]||{})})).filter((x,i)=>selMat[i]&&selMat[i].on),...custMat.filter(c=>c.on)].reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
   const slevaP=(+($('sleva-prace')&&$('sleva-prace').value)||0)/100;
   const praceAll=[...D_prace.map((x,i)=>({...x,...(selPrace[i]||{})})).filter((x,i)=>selPrace[i]&&selPrace[i].on),...custPrace.filter(c=>c.on)];
-  const tPrace=praceAll.reduce((a,x)=>{const val=(+x.q||0)*(+x.p||0);return a+(x.s==='Doprava a vícenáklady'?val:val*(1-slevaP));},0);
+  const tPrace=praceAll.reduce((a,x)=>{const val=(+x.q||0)*(+x.p||0);return a+(x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slevaP));},0);
   if($('tot-mat'))$('tot-mat').textContent='Celkem materiál bez DPH: '+cz(tMat)+' Kč';
   if($('tot-prace')){
     const PVC_CATS=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
