@@ -244,7 +244,16 @@ const PRACE_INJ=['Injektáže','Doprava a vícenáklady','Centrála'];
 const D_mat=D.items.filter(x=>MAT_CATS.includes(x.s));
 const D_prace=D.items.filter(x=>PRACE_CATS.includes(x.s)&&!x.n.includes('SMAZANO_SKIP'));
 function drawMat(){const t=$('fm').value.toLowerCase();let h='',last='';D_mat.forEach((x,i)=>{if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,i,0,'mat')});if(custMat.length)h+='<h3>Vlastní položky</h3>'+custMat.map((x,i)=>row(x,i,1,'mat')).join('');$('items-mat').innerHTML=h;tot()}
-function drawPrace(){const t=$('fp').value.toLowerCase();let h='',last='';D_prace.forEach((x,i)=>{if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,i,0,'prace')});if(custPrace.length)h+='<h3>Vlastní položky</h3>'+custPrace.map((x,i)=>row(x,i,1,'prace')).join('');$('items-prace').innerHTML=h;tot()}
+let _praceTab='pvc';
+function setPraceTab(tab){
+  _praceTab=tab;
+  $('ptab-pvc').style.borderBottom=tab=='pvc'?'2px solid var(--ac)':'none';
+  $('ptab-pvc').style.opacity=tab=='pvc'?'1':'0.5';
+  $('ptab-inj').style.borderBottom=tab=='inj'?'2px solid var(--ac)':'none';
+  $('ptab-inj').style.opacity=tab=='inj'?'1':'0.5';
+  drawPrace();
+}
+function drawPrace(){const t=$('fp').value.toLowerCase();const cats=_praceTab=='pvc'?PRACE_PVC:PRACE_INJ;const items=D_prace.filter(x=>cats.includes(x.s));let h='',last='';items.forEach((x,i)=>{const gi=D_prace.indexOf(x);if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,gi,0,'prace')});if(custPrace.length)h+='<h3>Vlastní položky</h3>'+custPrace.map((x,i)=>row(x,i,1,'prace')).join('');$('items-prace').innerHTML=h;tot()}
 $('fm').oninput=drawMat;$('addc-mat').onclick=()=>{custMat.push({n:'',u:'ks',q:1,p:0,on:true});drawMat()};
 $('fp').oninput=drawPrace;if($('sleva-prace'))$('sleva-prace').oninput=tot;$('addc-prace').onclick=()=>{custPrace.push({n:'',u:'ks',q:1,p:0,on:true});drawPrace()};
 $('items-mat').addEventListener('input',e=>{const r=e.target.closest('.it');if(!r)return;const i=+r.dataset.i,c=r.dataset.c=='1',t=e.target,o=c?custMat[i]:(selMat[i]=selMat[i]||{p:D_mat[i].p});
@@ -255,7 +264,7 @@ $('items-prace').addEventListener('input',e=>{const r=e.target.closest('.it');if
 if(t.classList.contains('o')){o.on=t.checked;if(o.on&&!o.q)o.q=1,r.querySelector('.q').value=1;r.classList.toggle('off',!o.on)}
 else if(t.classList.contains('q')){o.q=t.value;if(t.value&&!o.on){o.on=true;r.querySelector('.o').checked=true;r.classList.remove('off')}}
 else if(t.classList.contains('p'))o.p=t.value;else if(t.classList.contains('cn'))o.n=t.value;else if(t.classList.contains('cu'))o.u=t.value;tot();sv()});
-drawMat();drawPrace();
+drawMat();setPraceTab('pvc');
 /* fotky */
 const shrink=f=>new Promise(r=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1200/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.75))};i.src=URL.createObjectURL(f)});
 function dph(){$('ph').innerHTML=photos.map((p,i)=>`<div><img src="${p.s}"><input data-p="${i}" value="${esc(p.t)}" placeholder="Místo / popis"><button class="b l" data-d="${i}" style="width:100%;margin-top:6px">Odstranit</button></div>`).join('')}
@@ -334,8 +343,8 @@ function renderJobList(){
   return html;
 }
 $('jo').onclick=()=>{const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
-function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();drawPrace();dph()}
-async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();drawPrace();dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
+function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
+async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
 $('jl').onclick=async e=>{
   const pdf=e.target.closest('[data-pdf]');
   if(pdf){
