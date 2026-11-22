@@ -242,16 +242,22 @@ function tot(){
     praceAll.forEach(x=>{
       const val=(+x.q||0)*(+x.p||0);
       const v=x.s==='Doprava a vícenáklady'||x.s==='Centrála'?val:val*(1-slevaP);
-      if(x.s==='Doprava a vícenáklady')dopJa+=v;
-      else if(x.s==='Centrála')cenJa+=v;
+      if(x.s==='Centrála')cenJa+=v;
+      else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))cenJa+=v;else dopJa+=v;}
       else if(PVC_CATS.includes(x.s)){pvcJa+=v*0.7;pvcT+=v*0.3;}
       else if(INJ_CATS.includes(x.s)){injJa+=v*0.5;injT+=v*0.5;}
     });
-    const ondra=pvcJa+injJa+dopJa+cenJa;
+    const ondra70bez=pvcJa+injJa;
+    const ondra=ondra70bez+dopJa+cenJa;
     const turto=pvcT+injT;
     let txt='Celkem práce: '+cz(tPrace)+' Kč';
     if(slevaP>0)txt+=' (sleva '+Math.round(slevaP*100)+'%)';
-    if(tPrace>0)txt+='<br><span style="color:#8bc34a">Ondra: '+cz(ondra)+' Kč</span> &nbsp; <span style="color:#90caf9">Turto: '+cz(turto)+' Kč</span>';
+    if(tPrace>0){
+      txt+='<br><span style="color:#8bc34a">Ondra 70% bez dopravy: '+cz(ondra70bez)+' Kč</span>';
+      if(dopJa>0||cenJa>0)txt+=' &nbsp; <span style="color:#ffd54f">Doprava+víc: '+cz(dopJa+cenJa)+' Kč</span>';
+      txt+=' &nbsp; <span style="color:#8bc34a;font-weight:bold">Ondra celkem: '+cz(ondra)+' Kč</span>';
+      txt+=' &nbsp; <span style="color:#90caf9">Turto: '+cz(turto)+' Kč</span>';
+    }
     $('tot-prace').innerHTML=txt;
   }
   return tMat+tPrace;
