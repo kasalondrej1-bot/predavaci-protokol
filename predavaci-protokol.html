@@ -310,15 +310,25 @@ const SB_URL='https://xwmsspcgecdvtsmmhqvq.supabase.co',SB_KEY='eyJhbGciOiJIUzI1
 const sbH={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
 async function sbSave(o,phs){try{const r=await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:o.id,data:{...o,photos:phs||[]},updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}}
 async function sbLoad(){
-  // Načteme záznamy po dávkách kvůli timeoutu
+  // Načteme data bez fotek (jsou příliš velké -> timeout)
   try{
-    const r=await fetch(SB_URL+'/rest/v1/zakazky?select=id,updated_at,data&order=updated_at.desc&limit=200',{
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Range-Unit':'items','Range':'0-199'}
+    // Supabase jsonb operátor: data->>'id' atd., ale fotky vynecháme přes SQL funkci
+    // Použijeme select s jsonb minus operátorem přes RPC nebo prostě jen načteme a odebereme photos
+    const r=await fetch(SB_URL+'/rest/v1/rpc/zakazky_bez_fotek',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+      body:'{}'
     });
     if(!r.ok){console.error('sbLoad error',r.status,await r.text());return null;}
     const rows=await r.json();
     console.log('sbLoad rows:',rows.length);
-    return rows.map(x=>x.data);
+    // Odstraníme fotky z dat aby se ušetřila paměť (fotky se načtou při otevření zakázky)
+    return rows.map(x=>{
+      if(!x.data)return x.data;
+      const d={...x.data};
+      if(d.photos)d.photos=[];
+      return d;
+    });
   }catch(e){console.error('sbLoad exception',e);return null;}
 }
 async function sbDelete(id){try{await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data:{id,deleted:true,ts:Date.now()},updated_at:new Date().toISOString()})})}catch(e){}}
