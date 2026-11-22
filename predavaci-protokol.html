@@ -702,16 +702,11 @@ let _role='';
 function getRole(){return _role||sessionStorage.getItem('tu_role')||'';}
 function applyRole(role){
   _role=role;
-  // Záložka uložených zakázek
-  const joBtn=document.querySelector('nav button[onclick*="jo"]')||[...document.querySelectorAll('nav button')].find(b=>b.textContent.includes('Uložené'));
-  // Skrýt tlačítko Uložené zakázky pro roli prace
-  if(joBtn)joBtn.style.display=role==='prace'?'none':'';
-  // Skrýt ceny v materiálech a pracích pro roli prace
-  // Apply body class for CSS-based role hiding
   document.body.classList.toggle('role-prace',role==='prace');
   document.body.classList.toggle('role-turto',role==='turto');
   document.body.classList.toggle('role-ondra',role==='ondra');
 }
+try{if(sessionStorage.getItem('tu')==='1'&&!sessionStorage.getItem('tu_role')){sessionStorage.clear();}}catch(e){}
 const lk=document.getElementById('lock');
 const pinI=document.getElementById('pin');
 const lerr=document.getElementById('lerr');
@@ -722,18 +717,19 @@ function unlock(h){
     _role=role;
     try{sessionStorage.setItem('tu','1');sessionStorage.setItem('tu_role',role);}catch(e){}
     applyRole(role);
-  }else{lerr.textContent='Špatné heslo, zkuste znovu.';pinI.value='';pinI.focus();}
+  }else{
+    lerr.textContent='Špatné heslo, zkuste znovu.';
+    pinI.value='';
+    pinI.focus();
+  }
 }
-// Vymaž starou session bez role (kompatibilita se starou verzí)
-try{if(sessionStorage.getItem('tu')==='1'&&!sessionStorage.getItem('tu_role')){sessionStorage.clear();}}catch(e){}
-const savedRole=sessionStorage.getItem('tu_role');
-// Pokud je stará session bez role, vymaž ji
-if(sessionStorage.getItem('tu')==='1'&&!savedRole){sessionStorage.removeItem('tu');}
-if(sessionStorage.getItem('tu')==='1'&&savedRole&&HESLA[Object.keys(HESLA).find(k=>HESLA[k]===savedRole)||'']){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
-else if(sessionStorage.getItem('tu')==='1'&&savedRole){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
+const _sr=sessionStorage.getItem('tu_role');
+if(sessionStorage.getItem('tu')==='1'&&_sr&&HESLA[Object.keys(HESLA).find(k=>HESLA[k]===_sr)||'']!==undefined){
+  lk.style.display='none';_role=_sr;setTimeout(()=>applyRole(_sr),200);
+}
 document.getElementById('unlockBtn').onclick=()=>unlock(pinI.value);
-pinI.onkeydown=e=>{if(e.key==='Enter')unlock(pinI.value)};
-setTimeout(()=>{if(lk.style.display!=='none')pinI.focus()},100);
+pinI.onkeydown=e=>{if(e.key==='Enter')unlock(pinI.value);};
+setTimeout(()=>{if(lk.style.display!=='none')pinI.focus();},100);
 
 // Supabase konfigurace
 const SUPA_URL='https://xwmsspcgecdvtsmmhqvq.supabase.co';
