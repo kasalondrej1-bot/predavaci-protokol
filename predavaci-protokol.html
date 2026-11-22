@@ -336,7 +336,7 @@ document.getElementById('inp_kontakt').addEventListener('change',e=>{const val=e
   fillDL();renderJL();
   if(J.length>0)jmsg('Zakázky synchronizovány ('+J.length+')');
 })();
-function renderJL(){const l=$('jl');if(l.style.display=='block'){l.innerHTML=J.length?J.map(x=>`<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px"><div style="flex:1;cursor:pointer" data-o="${x.id}"><b>${esc(x.t||'–')}</b><br><small style="color:var(--mu)">${fmtDatum(x.k&&x.k.datum||'')}${x.k&&x.k.datum?' · ':''}<span style="opacity:.6">uloženo ${new Date(x.ts).toLocaleString('cs-CZ')}</span></small></div><button class="b l" data-x="${x.id}">Smazat</button></div>`).join(''):'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>'}}
+function renderJL(){const l=$("jl");if(l)l.innerHTML=renderJobList();}
 $('js').onclick=async()=>{commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J))}catch(e){jmsg('Uložení se nepovedlo.');return}await idb.save(oid,photos);sbSave(o,photos).then(ok=>jmsg(ok?'Uloženo a synchronizováno: '+t:'Uloženo lokálně: '+t+' (bez připojení)')).catch(()=>jmsg('Uloženo lokálně: '+t))};
 function renderJobList(){
   const sorted=[...J].sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});
@@ -369,7 +369,7 @@ function renderJobList(){
       const PVC_C=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
       const INJ_C=['Injektáže'];
       let mesRows='',sumCena=0,sumO70bez=0,sumO70dop=0,sumT30bez=0,sumDop=0,sumVic=0,sumCelkBez=0;
-      items.forEach(zak=>{
+      items.forEach(zak=>{try{
         const selP=zak.selPrace||{};
         const custP=zak.custPrace||[];
         const slvP=(zak.slevaP||0)/100;
@@ -404,6 +404,7 @@ function renderJobList(){
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(vicJa>0?cz(vicJa)+' Kč':'-')+'</td>'
           +'<td style="padding:3px 6px;text-align:right">'+(celkBez>0?cz(celkBez)+' Kč':'-')+'</td>'
           +'</tr>';
+        }catch(e){console.warn('row err',e)}
       });
       const fakturRow=getRole()!=='turto'
         ?'<tr><td colspan="5" style="padding:4px 6px"></td>'
