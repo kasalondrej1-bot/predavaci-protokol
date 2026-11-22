@@ -706,12 +706,17 @@ function applyRole(role){
   document.body.classList.toggle('role-turto',role==='turto');
   document.body.classList.toggle('role-ondra',role==='ondra');
 }
-try{if(sessionStorage.getItem('tu')==='1'&&!sessionStorage.getItem('tu_role')){sessionStorage.clear();}}catch(e){}
+// Přihlášení – 3 hesla
+{
+  const roles=['ondra','turto','prace'];
+  const sr=sessionStorage.getItem('tu_role');
+  if(!sr||!roles.includes(sr)){sessionStorage.clear();}
+}
 const lk=document.getElementById('lock');
 const pinI=document.getElementById('pin');
 const lerr=document.getElementById('lerr');
 function unlock(h){
-  const role=HESLA[h];
+  const role={'22082009':'ondra','LuckaTurto':'turto','TurtoPrace':'prace'}[h];
   if(role){
     lk.style.display='none';
     _role=role;
@@ -723,9 +728,11 @@ function unlock(h){
     pinI.focus();
   }
 }
-const _sr=sessionStorage.getItem('tu_role');
-if(sessionStorage.getItem('tu')==='1'&&_sr&&HESLA[Object.keys(HESLA).find(k=>HESLA[k]===_sr)||'']!==undefined){
-  lk.style.display='none';_role=_sr;setTimeout(()=>applyRole(_sr),200);
+{
+  const sr=sessionStorage.getItem('tu_role');
+  if(sessionStorage.getItem('tu')==='1'&&sr){
+    lk.style.display='none';_role=sr;setTimeout(()=>applyRole(sr),200);
+  }
 }
 document.getElementById('unlockBtn').onclick=()=>unlock(pinI.value);
 pinI.onkeydown=e=>{if(e.key==='Enter')unlock(pinI.value);};
