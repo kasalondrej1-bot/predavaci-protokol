@@ -724,8 +724,13 @@ function unlock(h){
     applyRole(role);
   }else{lerr.textContent='Špatné heslo, zkuste znovu.';pinI.value='';pinI.focus();}
 }
+// Vymaž starou session bez role (kompatibilita se starou verzí)
+try{if(sessionStorage.getItem('tu')==='1'&&!sessionStorage.getItem('tu_role')){sessionStorage.clear();}}catch(e){}
 const savedRole=sessionStorage.getItem('tu_role');
-if(sessionStorage.getItem('tu')==='1'&&savedRole){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
+// Pokud je stará session bez role, vymaž ji
+if(sessionStorage.getItem('tu')==='1'&&!savedRole){sessionStorage.removeItem('tu');}
+if(sessionStorage.getItem('tu')==='1'&&savedRole&&HESLA[Object.keys(HESLA).find(k=>HESLA[k]===savedRole)||'']){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
+else if(sessionStorage.getItem('tu')==='1'&&savedRole){lk.style.display='none';_role=savedRole;setTimeout(()=>applyRole(savedRole),200);}
 document.getElementById('unlockBtn').onclick=()=>unlock(pinI.value);
 pinI.onkeydown=e=>{if(e.key==='Enter')unlock(pinI.value)};
 setTimeout(()=>{if(lk.style.display!=='none')pinI.focus()},100);
