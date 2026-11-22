@@ -328,6 +328,7 @@ document.getElementById('inp_kontakt').addEventListener('change',e=>{const val=e
     if(!localMap.has(r.id)||localMap.get(r.id).ts<r.ts)localMap.set(r.id,r)
   })}
   J=[...localMap.values()].filter(x=>!x.deleted).sort((a,b)=>b.ts-a.ts);
+  console.log('DEBUG: remote=',remote&&remote.length,'localMap=',localMap.size,'J after filter=',J.length,J.map(x=>x.t));
   try{localStorage.setItem('turtoJobs',JSON.stringify(J))}catch(e){}
   // Push lokálních zakázek na Supabase (aby byly vidět na jiných zařízeních)
   const remoteIds=new Set((remote||[]).map(x=>x.id));
