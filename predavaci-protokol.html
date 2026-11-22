@@ -397,15 +397,12 @@ function renderJobList(){
         const slvP=(zak.slevaP||0)/100;
         const prAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((_,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
         let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,vicJa=0;
-        const zakNazev=zak.t||'?';
-        if(zakNazev.toLowerCase().includes('hinton'))console.log('HINTON prAll categories:',prAll.map(x=>x.s+':'+x.n).join(' | '));
         prAll.forEach(x=>{
           const val=(+x.q||0)*(+x.p||0);
           const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
           cena+=vs;
-          if(x.s==='Doprava a vícenáklady'){dopJa+=vs;}
-          else if(x.s==='Centrála'){vicJa+=vs;console.log('VIC',zakNazev,x.n,vs);}
-          else if(x.s&&x.s.toLowerCase().includes('centr')){console.log('CENTR variant',zakNazev,x.s,x.n);}
+          if(x.s==='Centrála'){vicJa+=vs;}
+          else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))vicJa+=vs;else dopJa+=vs;}
           else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
           else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
         });
@@ -557,8 +554,8 @@ function buildZuctovaniHtml(j){
     const val=(+x.q||0)*(+x.p||0);
     const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
     cena+=vs;
-    if(x.s==='Doprava a vícenáklady')dopJa+=vs;
-    else if(x.s==='Centrála')vicJa+=vs;
+    if(x.s==='Centrála')vicJa+=vs;
+    else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))vicJa+=vs;else dopJa+=vs;}
     else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
     else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
   });
