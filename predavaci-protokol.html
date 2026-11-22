@@ -246,6 +246,7 @@ function tot(){
       else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))cenJa+=v;else dopJa+=v;}
       else if(PVC_CATS.includes(x.s)){pvcJa+=v*0.7;pvcT+=v*0.3;}
       else if(INJ_CATS.includes(x.s)){injJa+=v*0.5;injT+=v*0.5;}
+      else{pvcJa+=v*0.7;pvcT+=v*0.3;}  // ostatní položky bez kategorie → 70/30
     });
     const ondra70bez=pvcJa+injJa;
     const ondra=ondra70bez+dopJa+cenJa;
@@ -253,10 +254,17 @@ function tot(){
     let txt='Celkem práce: '+cz(tPrace)+' Kč';
     if(slevaP>0)txt+=' (sleva '+Math.round(slevaP*100)+'%)';
     if(tPrace>0){
-      txt+='<br><span style="color:#8bc34a">Ondra 70% bez dopravy: '+cz(ondra70bez)+' Kč</span>';
-      if(dopJa>0||cenJa>0)txt+=' &nbsp; <span style="color:#ffd54f">Doprava+víc: '+cz(dopJa+cenJa)+' Kč</span>';
-      txt+=' &nbsp; <span style="color:#8bc34a;font-weight:bold">Ondra celkem: '+cz(ondra)+' Kč</span>';
-      txt+=' &nbsp; <span style="color:#90caf9">Turto: '+cz(turto)+' Kč</span>';
+      txt='<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:4px">'
+        +'<div style="display:flex;flex-direction:column;gap:2px">'
+        +'<span style="color:#8bc34a">Ondra 70% bez dopravy: <b>'+cz(ondra70bez)+' Kč</b></span>'
+        +(dopJa>0||cenJa>0?'<span style="color:#ffd54f">Doprava + vícenáklady: <b>'+cz(dopJa+cenJa)+' Kč</b></span>':'')
+        +'<span style="color:#8bc34a;font-weight:bold">Ondra celkem: <b>'+cz(ondra)+' Kč</b></span>'
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:2px;text-align:right">'
+        +'<span>Celkem práce: <b>'+cz(tPrace)+' Kč</b>'+(slevaP>0?' (sleva '+Math.round(slevaP*100)+'%)':'')+'</span>'
+        +'<span style="color:#90caf9">Turto: <b>'+cz(turto)+' Kč</b></span>'
+        +'</div>'
+        +'</div>';
     }
     $('tot-prace').innerHTML=txt;
   }
