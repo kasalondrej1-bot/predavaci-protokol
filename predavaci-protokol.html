@@ -274,9 +274,9 @@ function tot(){
 function row(x,i,c,type){
   const selObj=type==='prace'?selPrace:selMat;
   const s=c?x:(selObj[i]||{});
-  const isVic=(x.n==='VÍCENÁKLADY'||x.n==='Centrála'||x.s==='Centrála');
+  const isVic=(x.n==='VÍCENÁKLADY');
   const popVal=s.popis||'';
-  const popField=isVic&&type==='prace'?`<input class="vic-popis" placeholder="Popis (zač to je)" value="${esc(popVal)}" style="margin-left:4px;padding:2px 6px;border:1px solid #aaa;border-radius:4px;font-size:12px;width:160px">`:'';
+  const popField=isVic&&type==='prace'?`<input class="vic-popis" placeholder="Popis" value="${esc(popVal)}" style="margin-left:4px;padding:2px 6px;border:1px solid #aaa;border-radius:4px;font-size:12px;width:160px">`:'';
   return `<div class="it ${s.on?'':'off'}" data-i="${i}" data-c="${c?1:0}"><input type="checkbox" class="o" ${s.on?'checked':''}><div>${c?`<input class="cn" value="${esc(x.n)}" placeholder="Název položky">`:esc(x.n)+(x.d?`<small>${esc(x.d)}</small>`:'')}</div><input type="number" inputmode="decimal" class="q" min="0" step="any" value="${s.q??''}" placeholder="ks"><span class="u">${c?`<input class="cu" value="${esc(x.u)}">`:esc(x.u)}</span><input type="number" inputmode="decimal" class="p" step="any" value="${s.p??x.p}">${popField}</div>`;
 }
 const MAT_CATS=['PVC pásy','Injektážní hadičky','Těsnicí plechy','Bentonitová páska'];
@@ -289,7 +289,7 @@ function drawMat(){const t=$('fm').value.toLowerCase();let h='',last='';D_mat.fo
 let _praceTab='pvc';
 // Oddělené uložení dopravy pro PVC a Inj záložky
 // Indexy: 67=Centrála, 68=DOPRAVA, 69=VÍCENÁKLADY
-const DOPi=[67,68,69];
+const DOPi=[46,47,48]; // D_prace indices: 46=Centrála, 47=DOPRAVA, 48=VÍCENÁKLADY
 let selPraceDop={pvc:{},inj:{}};
 function setPraceTab(tab){
   // Uložit aktuální stav dopravy pro odcházející záložku
@@ -446,9 +446,9 @@ function renderJobList(){
         const celkBez=o70bez+t30bez;
         sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumVic+=vicJa;sumCelkBez+=celkBez;
         const datum=zak.k&&zak.k.datum?zak.k.datum.split('-').reverse().slice(0,2).join('.'):'-';
-        const hasInj=prAll.some(x=>INJ_C.includes(x.s)||(x.n&&x.n.toLowerCase().includes('injekt')));
+        const hasInj=prAll.some(x=>INJ_C.includes(x.s));
         const hasPvc=prAll.some(x=>PVC_C.includes(x.s));
-        const typLabel=hasInj&&hasPvc?'PVC+Inj':hasInj?'Inj':'PVC';
+        const typLabel=hasInj&&hasPvc?'PVC + INJ.':hasInj?'INJ.':'PVC';
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
         mesRows+='<tr style="border-bottom:1px solid #ccc">'
