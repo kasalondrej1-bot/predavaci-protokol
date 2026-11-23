@@ -261,6 +261,7 @@ function tot(){
         +'<span style="color:#8bc34a;font-weight:bold">Ondra celkem: <b>'+cz(ondra)+' Kč</b></span>'
         +'</div>'
         +'<div style="display:flex;flex-direction:column;gap:2px;text-align:right">'
+        +(slevaP>0?'<span style="color:#aaa">Celkem bez slevy: <b>'+cz(praceAll.reduce((a,x)=>(+x.q||0)*(+x.p||0)+a,0))+' Kč</b></span>':'')
         +'<span>Celkem práce: <b>'+cz(tPrace)+' Kč</b>'+(slevaP>0?' (sleva '+Math.round(slevaP*100)+'%)':'')+'</span>'
         +'<span style="color:#90caf9">Turto: <b>'+cz(turto)+' Kč</b></span>'
         +'</div>'
@@ -270,7 +271,14 @@ function tot(){
   }
   return tMat+tPrace;
 }
-function row(x,i,c,type){const selObj=type==='prace'?selPrace:selMat;const custObj=type==='prace'?custPrace:custMat;const s=c?x:(selObj[i]||{});return `<div class="it ${s.on?'':'off'}" data-i="${i}" data-c="${c?1:0}"><input type="checkbox" class="o" ${s.on?'checked':''}><div>${c?`<input class="cn" value="${esc(x.n)}" placeholder="Název položky">`:esc(x.n)+(x.d?`<small>${esc(x.d)}</small>`:'')}</div><input type="number" inputmode="decimal" class="q" min="0" step="any" value="${s.q??''}" placeholder="ks"><span class="u">${c?`<input class="cu" value="${esc(x.u)}">`:esc(x.u)}</span><input type="number" inputmode="decimal" class="p" step="any" value="${s.p??x.p}"></div>`}
+function row(x,i,c,type){
+  const selObj=type==='prace'?selPrace:selMat;
+  const s=c?x:(selObj[i]||{});
+  const isVic=(x.n==='VÍCENÁKLADY'||x.n==='Centrála'||x.s==='Centrála');
+  const popVal=s.popis||'';
+  const popField=isVic&&type==='prace'?`<input class="vic-popis" placeholder="Popis (zač to je)" value="${esc(popVal)}" style="margin-left:4px;padding:2px 6px;border:1px solid #aaa;border-radius:4px;font-size:12px;width:160px">`:'';
+  return `<div class="it ${s.on?'':'off'}" data-i="${i}" data-c="${c?1:0}"><input type="checkbox" class="o" ${s.on?'checked':''}><div>${c?`<input class="cn" value="${esc(x.n)}" placeholder="Název položky">`:esc(x.n)+(x.d?`<small>${esc(x.d)}</small>`:'')}</div><input type="number" inputmode="decimal" class="q" min="0" step="any" value="${s.q??''}" placeholder="ks"><span class="u">${c?`<input class="cu" value="${esc(x.u)}">`:esc(x.u)}</span><input type="number" inputmode="decimal" class="p" step="any" value="${s.p??x.p}">${popField}</div>`;
+}
 const MAT_CATS=['PVC pásy','Injektážní hadičky','Těsnicí plechy','Bentonitová páska'];
 const PRACE_CATS=['PVC pásy - svary a řezy','PVC pásy - montáž','Injektáže','Těsnicí plechy - montáž','Bentonitová páska - montáž','Doprava a vícenáklady','Centrála'];
 const PRACE_PVC=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž','Doprava a vícenáklady','Centrála'];
@@ -279,12 +287,24 @@ const D_mat=D.items.filter(x=>MAT_CATS.includes(x.s));
 const D_prace=D.items.filter(x=>PRACE_CATS.includes(x.s)&&!x.n.includes('SMAZANO_SKIP'));
 function drawMat(){const t=$('fm').value.toLowerCase();let h='',last='';D_mat.forEach((x,i)=>{if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,i,0,'mat')});if(custMat.length)h+='<h3>Vlastní položky</h3>'+custMat.map((x,i)=>row(x,i,1,'mat')).join('');$('items-mat').innerHTML=h;tot()}
 let _praceTab='pvc';
+// Oddělené uložení dopravy pro PVC a Inj záložky
+// Indexy: 67=Centrála, 68=DOPRAVA, 69=VÍCENÁKLADY
+const DOPi=[67,68,69];
+let selPraceDop={pvc:{},inj:{}};
 function setPraceTab(tab){
+  // Uložit aktuální stav dopravy pro odcházející záložku
+  const old=_praceTab||'pvc';
+  DOPi.forEach(i=>{selPraceDop[old][i]=selPrace[i]?{...selPrace[i]}:undefined});
   _praceTab=tab;
   $('ptab-pvc').style.borderBottom=tab=='pvc'?'2px solid var(--ac)':'none';
   $('ptab-pvc').style.opacity=tab=='pvc'?'1':'0.5';
   $('ptab-inj').style.borderBottom=tab=='inj'?'2px solid var(--ac)':'none';
   $('ptab-inj').style.opacity=tab=='inj'?'1':'0.5';
+  // Obnovit stav dopravy pro novou záložku
+  DOPi.forEach(i=>{
+    if(selPraceDop[tab][i]!==undefined)selPrace[i]=selPraceDop[tab][i];
+    else delete selPrace[i];
+  });
   drawPrace();
 }
 function drawPrace(){const t=$('fp').value.toLowerCase();const cats=_praceTab=='pvc'?PRACE_PVC:PRACE_INJ;const items=D_prace.filter(x=>cats.includes(x.s));let h='',last='';items.forEach((x,i)=>{const gi=D_prace.indexOf(x);if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,gi,0,'prace')});if(custPrace.length)h+='<h3>Vlastní položky</h3>'+custPrace.map((x,i)=>row(x,i,1,'prace')).join('');$('items-prace').innerHTML=h;tot()}
@@ -293,7 +313,7 @@ $('fp').oninput=drawPrace;if($('sleva-prace'))$('sleva-prace').oninput=tot;$('ad
 $('items-mat').addEventListener('input',e=>{const r=e.target.closest('.it');if(!r)return;const i=+r.dataset.i,c=r.dataset.c=='1',t=e.target,o=c?custMat[i]:(selMat[i]=selMat[i]||{p:D_mat[i].p});
 if(t.classList.contains('o')){o.on=t.checked;if(o.on&&!o.q)o.q=1,r.querySelector('.q').value=1;r.classList.toggle('off',!o.on)}
 else if(t.classList.contains('q')){o.q=t.value;if(t.value&&!o.on){o.on=true;r.querySelector('.o').checked=true;r.classList.remove('off')}}
-else if(t.classList.contains('p'))o.p=t.value;else if(t.classList.contains('cn'))o.n=t.value;else if(t.classList.contains('cu'))o.u=t.value;tot();sv()});
+else if(t.classList.contains('p'))o.p=t.value;else if(t.classList.contains('cn'))o.n=t.value;else if(t.classList.contains('cu'))o.u=t.value;else if(t.classList.contains('vic-popis'))o.popis=t.value;tot();sv()});
 $('items-prace').addEventListener('input',e=>{const r=e.target.closest('.it');if(!r)return;const i=+r.dataset.i,c=r.dataset.c=='1',t=e.target,o=c?custPrace[i]:(selPrace[i]=selPrace[i]||{p:D_prace[i].p});
 if(t.classList.contains('o')){o.on=t.checked;if(o.on&&!o.q)o.q=1,r.querySelector('.q').value=1;r.classList.toggle('off',!o.on)}
 else if(t.classList.contains('q')){o.q=t.value;if(t.value&&!o.on){o.on=true;r.querySelector('.o').checked=true;r.classList.remove('off')}}
@@ -348,7 +368,7 @@ async function sbLoad(){
 async function sbDelete(id){try{await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data:{id,deleted:true,ts:Date.now()},updated_at:new Date().toISOString()})})}catch(e){}}
 let jid=null,svT=null;const JS=()=>{try{return JSON.parse(localStorage.getItem('turtoJobs')||'[]')}catch(e){return[]}},jmsg=t=>$('jm').textContent=t;
 const fmtDatum=s=>s?s.split('-').reverse().join('.'):'';
-async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
+async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,selPraceDop,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
 let J=JS();
 function fillDL(){const kSet=new Set(),tSet=new Set(),eSet=new Set();J.forEach(j=>{if(j.k){if(j.k.kontakt)kSet.add(j.k.kontakt);if(j.k.tel)tSet.add(j.k.tel);if(j.k.email)eSet.add(j.k.email)}});const dl=id=>document.getElementById(id);if(dl('dl_kontakt'))dl('dl_kontakt').innerHTML=[...kSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_tel'))dl('dl_tel').innerHTML=[...tSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_email'))dl('dl_email').innerHTML=[...eSet].map(v=>`<option value="${esc(v)}">`).join('')}
 fillDL();
@@ -426,10 +446,13 @@ function renderJobList(){
         const celkBez=o70bez+t30bez;
         sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumVic+=vicJa;sumCelkBez+=celkBez;
         const datum=zak.k&&zak.k.datum?zak.k.datum.split('-').reverse().slice(0,2).join('.'):'-';
+        const hasInj=prAll.some(x=>INJ_C.includes(x.s)||(x.n&&x.n.toLowerCase().includes('injekt')));
+        const hasPvc=prAll.some(x=>PVC_C.includes(x.s));
+        const typLabel=hasInj&&hasPvc?'PVC+Inj':hasInj?'Inj':'PVC';
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
         mesRows+='<tr style="border-bottom:1px solid #ccc">'
-          +'<td style="padding:3px 6px">'+datum+'</td>'
+          +'<td style="padding:3px 6px;font-weight:bold;color:'+(hasInj?'#ce93d8':'#81d4fa')+'">'+typLabel+'</td>'+'<td style="padding:3px 6px">'+datum+'</td>'
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(cena>0?cz(cena)+' Kč':'-')+'</td>'
@@ -450,7 +473,7 @@ function renderJobList(){
       html+='<div style="overflow-x:auto;margin:8px 0 4px">'
         +'<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;background:#fff;color:#111">'
         +'<thead><tr style="background:#1565c0;color:#fff;font-weight:bold">'
-        +'<th style="padding:4px 6px;text-align:left">Datum</th>'
+        +'<th style="padding:4px 6px;text-align:left">Typ</th>'+'<th style="padding:4px 6px;text-align:left">Datum</th>'
         +'<th style="padding:4px 6px;text-align:left">Zákazník</th>'
         +'<th style="padding:4px 6px;text-align:left">Stavba</th>'
         +'<th style="padding:4px 6px;text-align:right">Cena celkem</th>'
@@ -464,7 +487,7 @@ function renderJobList(){
         +'<tbody>'+mesRows+'</tbody>'
         +'<tfoot>'
         +'<tr style="font-weight:bold;background:#e3f2fd">'
-        +'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
+        +'<td style="padding:4px 6px"></td>'+'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumCena)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right">'+cz(sumO70bez)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#fff176;color:#111">'+cz(sumO70dop)+' Kč</td>'
@@ -483,7 +506,7 @@ function renderJobList(){
 
 $('jo').onclick=()=>{if(getRole()==='prace')return;const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
-async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
+async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
 $('jl').onclick=async e=>{
   const zuct=e.target.closest('[data-zuct]');
   if(zuct){
