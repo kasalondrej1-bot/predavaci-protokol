@@ -287,26 +287,24 @@ const D_mat=D.items.filter(x=>MAT_CATS.includes(x.s));
 const D_prace=D.items.filter(x=>PRACE_CATS.includes(x.s)&&!x.n.includes('SMAZANO_SKIP'));
 function drawMat(){const t=$('fm').value.toLowerCase();let h='',last='';D_mat.forEach((x,i)=>{if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,i,0,'mat')});if(custMat.length)h+='<h3>Vlastní položky</h3>'+custMat.map((x,i)=>row(x,i,1,'mat')).join('');$('items-mat').innerHTML=h;tot()}
 let _praceTab='pvc';
-// Oddělené uložení dopravy pro PVC a Inj záložky
-// Indexy: 67=Centrála, 68=DOPRAVA, 69=VÍCENÁKLADY
-const DOPi=[46,47,48]; // D_prace indices: 46=Centrála, 47=DOPRAVA, 48=VÍCENÁKLADY
-let selPraceDop={pvc:{},inj:{}};
+// Oddělené uložení dopravy pro PVC a Inj záložky (indexy 46,47,48 v D_prace)
+const DOPi=[46,47,48];
+let dopPvc={},dopInj={};
 function setPraceTab(tab){
-  // Uložit aktuální stav dopravy pro odcházející záložku
-  const old=_praceTab||'pvc';
-  DOPi.forEach(i=>{selPraceDop[old][i]=selPrace[i]?{...selPrace[i]}:undefined});
+  // Uložit stav dopravy pro odcházející záložku
+  if(_praceTab==='pvc'){DOPi.forEach(i=>{dopPvc[i]=selPrace[i]?{...selPrace[i]}:undefined});}
+  else{DOPi.forEach(i=>{dopInj[i]=selPrace[i]?{...selPrace[i]}:undefined});}
   _praceTab=tab;
   $('ptab-pvc').style.borderBottom=tab=='pvc'?'2px solid var(--ac)':'none';
   $('ptab-pvc').style.opacity=tab=='pvc'?'1':'0.5';
   $('ptab-inj').style.borderBottom=tab=='inj'?'2px solid var(--ac)':'none';
   $('ptab-inj').style.opacity=tab=='inj'?'1':'0.5';
   // Obnovit stav dopravy pro novou záložku
-  DOPi.forEach(i=>{
-    if(selPraceDop[tab][i]!==undefined)selPrace[i]=selPraceDop[tab][i];
-    else delete selPrace[i];
-  });
+  const src=tab==='pvc'?dopPvc:dopInj;
+  DOPi.forEach(i=>{if(src[i]!==undefined)selPrace[i]=src[i];else delete selPrace[i];});
   drawPrace();
 }
+
 function drawPrace(){const t=$('fp').value.toLowerCase();const cats=_praceTab=='pvc'?PRACE_PVC:PRACE_INJ;const items=D_prace.filter(x=>cats.includes(x.s));let h='',last='';items.forEach((x,i)=>{const gi=D_prace.indexOf(x);if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,gi,0,'prace')});if(custPrace.length)h+='<h3>Vlastní položky</h3>'+custPrace.map((x,i)=>row(x,i,1,'prace')).join('');$('items-prace').innerHTML=h;tot()}
 $('fm').oninput=drawMat;$('addc-mat').onclick=()=>{custMat.push({n:'',u:'ks',q:1,p:0,on:true});drawMat()};
 $('fp').oninput=drawPrace;if($('sleva-prace'))$('sleva-prace').oninput=tot;$('addc-prace').onclick=()=>{custPrace.push({n:'',u:'ks',q:1,p:0,on:true});drawPrace()};
@@ -368,7 +366,7 @@ async function sbLoad(){
 async function sbDelete(id){try{await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data:{id,deleted:true,ts:Date.now()},updated_at:new Date().toISOString()})})}catch(e){}}
 let jid=null,svT=null;const JS=()=>{try{return JSON.parse(localStorage.getItem('turtoJobs')||'[]')}catch(e){return[]}},jmsg=t=>$('jm').textContent=t;
 const fmtDatum=s=>s?s.split('-').reverse().join('.'):'';
-async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,selPraceDop,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
+async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,dopPvc,dopInj,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
 let J=JS();
 function fillDL(){const kSet=new Set(),tSet=new Set(),eSet=new Set();J.forEach(j=>{if(j.k){if(j.k.kontakt)kSet.add(j.k.kontakt);if(j.k.tel)tSet.add(j.k.tel);if(j.k.email)eSet.add(j.k.email)}});const dl=id=>document.getElementById(id);if(dl('dl_kontakt'))dl('dl_kontakt').innerHTML=[...kSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_tel'))dl('dl_tel').innerHTML=[...tSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_email'))dl('dl_email').innerHTML=[...eSet].map(v=>`<option value="${esc(v)}">`).join('')}
 fillDL();
@@ -468,7 +466,7 @@ function renderJobList(){
       const fakturRow=getRole()!=='turto'
         ?'<tr><td colspan="5" style="padding:4px 6px"></td>'
           +'<td style="padding:6px;text-align:center;font-weight:bold;background:#c62828;color:#fff">K fakturaci<br>ONDRA</td>'
-          +'<td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM HOD: '+cz(sumO70bez+sumT30bez)+' Kč</td></tr>'
+          +'<td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM: '+cz(sumO70bez+sumT30bez)+' Kč</td></tr>'
         :'';
       html+='<div style="overflow-x:auto;margin:8px 0 4px">'
         +'<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;background:#fff;color:#111">'
@@ -506,7 +504,7 @@ function renderJobList(){
 
 $('jo').onclick=()=>{if(getRole()==='prace')return;const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
-async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
+async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};dopPvc=j.dopPvc||{};dopInj=j.dopInj||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
 $('jl').onclick=async e=>{
   const zuct=e.target.closest('[data-zuct]');
   if(zuct){
@@ -644,7 +642,7 @@ function buildZuctovaniHtml(j){
         <tr>
           <td colspan="3" style="padding:4px 6px"></td>
           <td style="padding:5px 6px;text-align:center;font-weight:bold;background:#c62828;color:#fff">K fakturaci<br>ONDRA</td>
-          <td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM HOD: ${cz(o70bez+t30bez)} Kč</td>
+          <td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM: ${cz(o70bez+t30bez)} Kč</td>
         </tr>
       </tfoot>
     </table>
