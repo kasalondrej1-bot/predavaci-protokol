@@ -255,11 +255,11 @@ function tot(){
     if(slevaP>0)txt+=' (sleva '+Math.round(slevaP*100)+'%)';
     if(tPrace>0){
       txt='<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:4px">'
-        +'<div style="display:flex;flex-direction:column;gap:2px">'
+        +(getRole()!=='turto'?'<div style="display:flex;flex-direction:column;gap:2px">'
         +'<span style="color:#8bc34a">Ondra 70% bez dopravy: <b>'+cz(ondra70bez)+' Kč</b></span>'
         +(dopJa>0||cenJa>0?'<span style="color:#ffd54f">Doprava + vícenáklady: <b>'+cz(dopJa+cenJa)+' Kč</b></span>':'')
         +'<span style="color:#8bc34a;font-weight:bold">Ondra celkem: <b>'+cz(ondra)+' Kč</b></span>'
-        +'</div>'
+        +'</div>':'')
         +'<div style="display:flex;flex-direction:column;gap:2px;text-align:right">'
         +(slevaP>0?'<span style="color:#aaa">Celkem bez slevy: <b>'+cz(praceAll.reduce((a,x)=>(+x.q||0)*(+x.p||0)+a,0))+' Kč</b></span>':'')
         +'<span>Celkem práce: <b>'+cz(tPrace)+' Kč</b>'+(slevaP>0?' (sleva '+Math.round(slevaP*100)+'%)':'')+'</span>'
@@ -422,13 +422,19 @@ function renderJobList(){
     if(getRole()!=='prace'){
       const PVC_C=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
       const INJ_C=['Injektáže'];
-      let mesRows='',sumCena=0,sumO70bez=0,sumO70dop=0,sumT30bez=0,sumDop=0,sumVic=0,sumCelkBez=0;
+      let mesRows='',sumCena=0,sumO70bez=0,sumO70dop=0,sumT30bez=0,sumDop=0,sumVic=0,sumCelkBez=0,sumMat=0;
       items.forEach(zak=>{try{
         const selP=zak.selPrace||{};
         const custP=zak.custPrace||[];
         const slvP=(zak.slevaP||0)/100;
         const prAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((_,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
-        let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,vicJa=0;
+        let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,vicJa=0,matJa=0;
+        // Spočítat materiál
+        const selM=zak.selMat||{};
+        const custM=zak.custMat||[];
+        const slvM=(zak.slevaM||0)/100;
+        const matAll=[...((zak._D_mat||[]).length?zak._D_mat:D_mat).map((x,i)=>({...x,...(selM[i]||{})})).filter((_,i)=>selM[i]&&selM[i].on),...custM.filter(c=>c.on)];
+        matAll.forEach(x=>{matJa+=(+x.q||0)*(+x.p||0)*(1-slvM);});
         prAll.forEach(x=>{
           const val=(+x.q||0)*(+x.p||0);
           const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
@@ -442,7 +448,7 @@ function renderJobList(){
         const o70dop=o70bez+dopJa+vicJa;
         const t30bez=pvcT+injT;
         const celkBez=o70bez+t30bez;
-        sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumVic+=vicJa;sumCelkBez+=celkBez;
+        sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumVic+=vicJa;sumCelkBez+=celkBez;sumMat+=matJa;
         const datum=zak.k&&zak.k.datum?zak.k.datum.split('-').reverse().slice(0,2).join('.'):'-';
         const hasInj=prAll.some(x=>INJ_C.includes(x.s));
         const hasPvc=prAll.some(x=>PVC_C.includes(x.s));
@@ -454,8 +460,9 @@ function renderJobList(){
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(cena>0?cz(cena)+' Kč':'-')+'</td>'
+          +'<td style="padding:3px 6px;text-align:right;background:#c8e6c9">'+(matJa>0?cz(matJa)+' Kč':'-')+'</td>'
           +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right">'+(o70bez>0?cz(o70bez)+' Kč':'-')+'</td>':'')
-          +'<td style="padding:3px 6px;text-align:right;background:#fff176">'+(o70dop>0?cz(o70dop)+' Kč':'-')+'</td>'
+          +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right;background:#fff176">'+(o70dop>0?cz(o70dop)+' Kč':'-')+'</td>':'')
           +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right">'+(t30bez>0?cz(t30bez)+' Kč':'-')+'</td>':'')
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(dopJa>0?cz(dopJa)+' Kč':'-')+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(vicJa>0?cz(vicJa)+' Kč':'-')+'</td>'
@@ -475,8 +482,9 @@ function renderJobList(){
         +'<th style="padding:4px 6px;text-align:left">Zákazník</th>'
         +'<th style="padding:4px 6px;text-align:left">Stavba</th>'
         +'<th style="padding:4px 6px;text-align:right">Cena celkem</th>'
+        +'<th style="padding:4px 6px;text-align:right;background:#a5d6a7;color:#111">Materiál</th>'
         +(getRole()!=='turto'?'<th style="padding:4px 6px;text-align:right">Ondra 70% bez dopravy</th>':'')
-        +'<th style="padding:4px 6px;text-align:right;background:#f9a825;color:#111">Ondra 70% + doprava</th>'
+        +(getRole()!=='turto'?'<th style="padding:4px 6px;text-align:right;background:#f9a825;color:#111">Ondra 70% + doprava</th>':'')
         +(getRole()!=='turto'?'<th style="padding:4px 6px;text-align:right">TURTO 30%</th>':'')
         +'<th style="padding:4px 6px;text-align:right;background:#1976d2">Doprava</th>'
         +'<th style="padding:4px 6px;text-align:right;background:#1976d2">Vícenáklady</th>'
@@ -487,8 +495,9 @@ function renderJobList(){
         +'<tr style="font-weight:bold;background:#e3f2fd">'
         +'<td style="padding:4px 6px"></td>'+'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumCena)+' Kč</td>'
+        +'<td style="padding:4px 6px;text-align:right;background:#c8e6c9">'+cz(sumMat)+' Kč</td>'
         +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right">'+cz(sumO70bez)+' Kč</td>':'')
-        +'<td style="padding:4px 6px;text-align:right;background:#fff176;color:#111">'+cz(sumO70dop)+' Kč</td>'
+        +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right;background:#fff176;color:#111">'+cz(sumO70dop)+' Kč</td>':'')
         +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right">'+cz(sumT30bez)+' Kč</td>':'')
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumDop)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumVic)+' Kč</td>'
@@ -512,10 +521,23 @@ $('jl').onclick=async e=>{
     if(!j)return;
     zuct.textContent='⏳…';zuct.disabled=true;
     try{
-      const pdfObj=await buildZuctovani(j);
       const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
       const firma=j.k&&j.k.firma||'';
-      const nm='Zuctovani-'+[datum,firma].filter(Boolean).join('-').replace(/[/\\:*?"<>|]+/g,'').slice(0,80)+'.pdf';
+      let pdfObj,nm;
+      if(getRole()==='turto'){
+        // Turto: PDF s cenami bez tabulky rozdělení zisku
+        const savedSelMat2=selMat,savedSelPrace2=selPrace,savedCustMat2=custMat,savedCustPrace2=custPrace,savedPhotos2=photos,savedK2={};
+        K.forEach(e=>{savedK2[e.dataset.k]=e.value});
+        await loadJ(j);
+        pdfObj=await buildPdf(true);
+        // Obnovit původní stav
+        K.forEach(e=>{if(savedK2[e.dataset.k]!=null)e.value=savedK2[e.dataset.k]});
+        selMat=savedSelMat2;selPrace=savedSelPrace2;custMat=savedCustMat2;custPrace=savedCustPrace2;photos=savedPhotos2;
+        nm='Protokol-'+[datum,firma].filter(Boolean).join('-').replace(/[/\\:*?"<>|]+/g,'').slice(0,80)+'.pdf';
+      }else{
+        pdfObj=await buildZuctovani(j);
+        nm='Zuctovani-'+[datum,firma].filter(Boolean).join('-').replace(/[/\\:*?"<>|]+/g,'').slice(0,80)+'.pdf';
+      }
       pdfObj.save(nm);
     }catch(er){alert('Chyba: '+er.message);}
     zuct.textContent='⬇ Zúčt.';zuct.disabled=false;
@@ -584,7 +606,7 @@ function buildZuctovaniHtml(j){
   const prAll=[...D_prace.map((x,i)=>({...x,...(selP[i]||{})})).filter((x,i)=>selP[i]&&selP[i].on),...custP.filter(c=>c.on)];
   const PVC_C=['PVC pásy - svary a řezy','PVC pásy - montáž','Těsnicí plechy - montáž','Bentonitová páska - montáž'];
   const INJ_C=['Injektáže'];
-  let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,vicJa=0;
+  let cena=0,pvcJa=0,pvcT=0,injJa=0,injT=0,dopJa=0,vicJa=0,matJa=0;
   prAll.forEach(x=>{
     const val=(+x.q||0)*(+x.p||0);
     const vs=x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val*(1-slvP);
