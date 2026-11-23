@@ -27,7 +27,7 @@ button.s{background:var(--navy)}button.l{background:none;color:var(--mu);border:
 .it{display:grid;grid-template-columns:34px 1fr 74px 52px 92px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ln)}
 .it input[type=checkbox]{width:26px;height:26px;padding:0}.it input[type=number]{padding:8px}.it small{display:block;color:var(--mu);font-size:12px}
 .it.off .q,.it.off .p{opacity:.35}.tot{font-size:20px;font-weight:700;text-align:right;margin-top:12px}
-body.role-prace .it .p{display:none!important}body.role-prace .tot{display:none!important}body.role-prace #jo{display:none!important}
+body.role-prace .it .p{display:none!important}body.role-prace .tot{display:none!important}body.role-prace #jo{display:none!important}body.role-turto [data-ceny="1"]{display:none!important}
 @media(max-width:600px){.it{grid-template-columns:30px 1fr 64px 80px}.it .u{display:none}}
 .ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}.ph div{border:1px solid var(--ln);border-radius:6px;padding:8px}.ph img{width:100%;height:130px;object-fit:cover;border-radius:4px}
 canvas.sg{width:100%;height:170px;border:1px dashed var(--mu);border-radius:6px;background:#fff;touch-action:none}
@@ -454,9 +454,9 @@ function renderJobList(){
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(cena>0?cz(cena)+' Kč':'-')+'</td>'
-          +'<td style="padding:3px 6px;text-align:right">'+(o70bez>0?cz(o70bez)+' Kč':'-')+'</td>'
+          +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right">'+(o70bez>0?cz(o70bez)+' Kč':'-')+'</td>':'')
           +'<td style="padding:3px 6px;text-align:right;background:#fff176">'+(o70dop>0?cz(o70dop)+' Kč':'-')+'</td>'
-          +'<td style="padding:3px 6px;text-align:right">'+(t30bez>0?cz(t30bez)+' Kč':'-')+'</td>'
+          +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right">'+(t30bez>0?cz(t30bez)+' Kč':'-')+'</td>':'')
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(dopJa>0?cz(dopJa)+' Kč':'-')+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(vicJa>0?cz(vicJa)+' Kč':'-')+'</td>'
           +'<td style="padding:3px 6px;text-align:right">'+(celkBez>0?cz(celkBez)+' Kč':'-')+'</td>'
@@ -475,9 +475,9 @@ function renderJobList(){
         +'<th style="padding:4px 6px;text-align:left">Zákazník</th>'
         +'<th style="padding:4px 6px;text-align:left">Stavba</th>'
         +'<th style="padding:4px 6px;text-align:right">Cena celkem</th>'
-        +'<th style="padding:4px 6px;text-align:right">Ondra 70% bez dopravy</th>'
+        +(getRole()!=='turto'?'<th style="padding:4px 6px;text-align:right">Ondra 70% bez dopravy</th>':'')
         +'<th style="padding:4px 6px;text-align:right;background:#f9a825;color:#111">Ondra 70% + doprava</th>'
-        +'<th style="padding:4px 6px;text-align:right">TURTO 30%</th>'
+        +(getRole()!=='turto'?'<th style="padding:4px 6px;text-align:right">TURTO 30%</th>':'')
         +'<th style="padding:4px 6px;text-align:right;background:#1976d2">Doprava</th>'
         +'<th style="padding:4px 6px;text-align:right;background:#1976d2">Vícenáklady</th>'
         +'<th style="padding:4px 6px;text-align:right">Celkem bez dopravy</th>'
@@ -487,9 +487,9 @@ function renderJobList(){
         +'<tr style="font-weight:bold;background:#e3f2fd">'
         +'<td style="padding:4px 6px"></td>'+'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumCena)+' Kč</td>'
-        +'<td style="padding:4px 6px;text-align:right">'+cz(sumO70bez)+' Kč</td>'
+        +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right">'+cz(sumO70bez)+' Kč</td>':'')
         +'<td style="padding:4px 6px;text-align:right;background:#fff176;color:#111">'+cz(sumO70dop)+' Kč</td>'
-        +'<td style="padding:4px 6px;text-align:right">'+cz(sumT30bez)+' Kč</td>'
+        +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right">'+cz(sumT30bez)+' Kč</td>':'')
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumDop)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumVic)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right">'+cz(sumCelkBez)+' Kč</td>'
