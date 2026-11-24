@@ -531,7 +531,7 @@ $('jl').onclick=async e=>{
       const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
       const firma=j.k&&j.k.firma||'';
       let pdfObj,nm;
-      if(getRole()==='turto'){
+      if(getRole()==='turto'||getRole()==='ondra'){
         // Turto: PDF s cenami bez tabulky rozdělení zisku
         const savedSelMat2=selMat,savedSelPrace2=selPrace,savedCustMat2=custMat,savedCustPrace2=custPrace,savedPhotos2=photos,savedK2={};
         K.forEach(e=>{savedK2[e.dataset.k]=e.value});
