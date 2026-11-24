@@ -567,6 +567,7 @@ $('jl').onclick=async e=>{
       selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];
       photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);
       if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;
+      console.log('PDF slevaP:',j.slevaP,'input val:',$('sleva-prace')&&$('sleva-prace').value,'items count:',items().length);
       const sCeny=pdf.dataset.ceny=='1';
       const pdfObj=await buildPdf(sCeny);
       const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
