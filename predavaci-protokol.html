@@ -567,7 +567,6 @@ $('jl').onclick=async e=>{
       selMat=j.selMat||{};selPrace=j.selPrace||{};custMat=j.custMat||[];custPrace=j.custPrace||[];
       photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);
       if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;
-      console.log('PDF slevaP:',j.slevaP,'input val:',$('sleva-prace')&&$('sleva-prace').value,'items count:',items().length);
       const sCeny=pdf.dataset.ceny=='1';
       const pdfObj=await buildPdf(sCeny);
       const datum=j.k&&j.k.datum?j.k.datum.split('-').reverse().join('.'):'';
@@ -611,6 +610,12 @@ if(hasI){
   const tPrac=pracI.reduce((a,x)=>a+x.q*x.p,0);
   const tMat=matI.reduce((a,x)=>a+x.q*x.p,0);
   const tAll=tPrac+tMat;
+  const slevaP2=(+($('sleva-prace')&&$('sleva-prace').value)||0);
+  // Cena prací před slevou (raw D_prace ceny)
+  const selP2=selPrace,custP2=custPrace;
+  const rawPraceItems=[...D_prace.map((x,i)=>({...x,...(selP2[i]||{})})).filter((x,i)=>selP2[i]&&selP2[i].on),...custP2.filter(c=>c.on)];
+  const tPracRaw=rawPraceItems.reduce((a,x)=>{const val=(+x.q||0)*(+x.p||0);return a+(x.n&&x.n.includes('DOPRAVA pracovníků montáže')?val:val);},0);
+  const uspora=tPracRaw-tPrac;
   // Sestavit všechny řádky s barevnými hlavičkami sekcí
   function rowHtml(x,bg){return `<tr style="${bg?'background:'+bg+';':''}" ><td>${esc(x.n)}</td><td class="n">${esc(x.u)}</td><td class="n">${fm(x.q)}</td>${PR?`<td class="n">${fm(x.p)} Kč</td><td class="n">${fm(x.q*x.p)} Kč</td>`:''}</tr>`;}
   function secHdr(label,color){return `<tr style="background:${color};color:#fff;font-weight:bold"><td colspan="${PR?5:3}">${label}</td></tr>`;}
@@ -623,7 +628,7 @@ if(hasI){
     const last=i+PG>=allRows.length;
     const zuct=last&&PR&&getRole()!=='turto'?buildZuctovaniHtml(null):'';
     const tbody=chunk.map(r=>r.hdr?secHdr(r.label,r.color):rowHtml(r.item,r.item===pracI[0]||r.item===matI[0]?'':r.bg)).join('');
-    P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${tbody}</tbody>${last&&PR?`<tfoot>${pracI.length?`<tr style="background:#dbeafe"><td colspan="${PR?4:2}" class="n">Práce celkem</td><td class="n">${fm(tPrac)} Kč</td></tr>`:''}${matI.length?`<tr style="background:#dcfce7"><td colspan="${PR?4:2}" class="n">Materiál celkem</td><td class="n">${fm(tMat)} Kč</td></tr>`:''}${matI.length&&pracI.length?`<tr style="background:#e0e0e0;font-weight:bold"><td colspan="${PR?4:2}" class="n">CELKEM</td><td class="n">${fm(tAll)} Kč</td></tr>`:''}</tfoot>`:''}</table>${zuct}`));
+    P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${tbody}</tbody>${last&&PR?`<tfoot>${pracI.length?`<tr style="background:#dbeafe"><td colspan="${PR?4:2}" class="n">Práce celkem</td><td class="n">${fm(tPrac)} Kč</td></tr>`:''}${matI.length?`<tr style="background:#dcfce7"><td colspan="${PR?4:2}" class="n">Materiál celkem</td><td class="n">${fm(tMat)} Kč</td></tr>`:''}${slevaP2>0&&PR?`<tr style="background:#fff9c4"><td colspan="${PR?4:2}" class="n" style="color:#888">Práce bez slevy</td><td class="n" style="color:#888">${fm(tPracRaw)} Kč</td></tr><tr style="background:#ffe0b2"><td colspan="${PR?4:2}" class="n" style="color:#e65100">Sleva ${slevaP2}%</td><td class="n" style="color:#e65100">- ${fm(uspora)} Kč</td></tr>`:''} ${matI.length&&pracI.length?`<tr style="background:#e0e0e0;font-weight:bold"><td colspan="${PR?4:2}" class="n">CELKEM</td><td class="n">${fm(tAll)} Kč</td></tr>`:''}</tfoot>`:''}</table>${zuct}`));
   }
 }
 const n=Math.max(1,Math.ceil(photos.length/4));
