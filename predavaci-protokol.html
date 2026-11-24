@@ -225,9 +225,16 @@ $('svc').onclick=()=>{$('svm').textContent=V('firma')?'Zákazník se ukládá au
 /* ceník */
 const fm=n=>Math.round(n*100)/100,cz=n=>fm(n).toLocaleString('cs-CZ');
 function items(){
+  const slevaP=(+($('sleva-prace')&&$('sleva-prace').value)||0)/100;
   const matItems=D_mat.map((x,i)=>({...x,...(selMat[i]||{})})).filter((x,i)=>selMat[i]&&selMat[i].on);
   const praceItems=D_prace.map((x,i)=>({...x,...(selPrace[i]||{})})).filter((x,i)=>selPrace[i]&&selPrace[i].on);
-  return [...matItems,...praceItems,...custMat.filter(c=>c.on),...custPrace.filter(c=>c.on)].map(x=>({n:x.n,u:x.u,q:+x.q||0,p:+x.p||0}));
+  // Aplikovat slevu na práce (ne na dopravu pracovníků)
+  const applySleva=(x)=>{
+    const p=+x.p||0;
+    const isDoprava=x.n&&x.n.includes('DOPRAVA pracovníků montáže');
+    return {...x,p:isDoprava?p:p*(1-slevaP)};
+  };
+  return [...matItems.map(x=>({n:x.n,u:x.u,q:+x.q||0,p:+x.p||0})),...[...praceItems,...custPrace.filter(c=>c.on)].map(x=>applySleva({n:x.n,u:x.u,q:+x.q||0,p:+x.p||0})),...custMat.filter(c=>c.on).map(x=>({n:x.n,u:x.u,q:+x.q||0,p:+x.p||0}))];
 }
 function tot(){
   const tMat=[...D_mat.map((x,i)=>({...x,...(selMat[i]||{})})).filter((x,i)=>selMat[i]&&selMat[i].on),...custMat.filter(c=>c.on)].reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
