@@ -590,77 +590,135 @@ $('jl').onclick=async e=>{
 };
 
 // ===== CENOVÁ NABÍDKA =====
-let cnSelMat={},cnSelPrace={},cnCustMat=[],cnCustPrace=[];
+let cnSelMat={},cnSelPrace={},cnCustMat=[],cnCustPrace={},cnId=null;
+cnCustMat=[];let _cnCustPrace=[];
 
-function renderCN(){
-  const sleva=(+($('cn-sleva')&&$('cn-sleva').value)||0)/100;
-  // Materiál
-  const matRows=D_mat.map((x,i)=>{
-    const s=cnSelMat[i]||{};
-    const on=s.on||false;
-    const q=s.q!=null?s.q:x.q||1;
-    const p=s.p!=null?s.p:x.p||0;
-    return `<div class="it ${on?'':'off'}" data-cni="${i}" data-cnt="mat">
-      <input type="checkbox" class="o" ${on?'checked':''}>
-      <span><b>${esc(x.n)}</b><small>${x.s||''}</small></span>
-      <input type="number" class="q" value="${q}" min="0" step="0.01">
-      <span class="u">${x.u||'ks'}</span>
-      <input type="number" class="p" value="${p}" min="0" step="1">
-    </div>`;
-  }).join('');
-  const custMatRows=cnCustMat.map((x,i)=>`<div class="it ${x.on?'':'off'}" data-cni="${i}" data-cnt="custmat">
-    <input type="checkbox" class="o" ${x.on?'checked':''}>
-    <input type="text" class="n" value="${esc(x.n)}" placeholder="Název">
-    <input type="number" class="q" value="${x.q||1}" min="0" step="0.01">
-    <input type="text" class="u" value="${esc(x.u||'ks')}" style="width:50px">
-    <input type="number" class="p" value="${x.p||0}" min="0" step="1">
+// LocalStorage pro CN
+const CN_KEY='turtoCN';
+function CNs(){try{return JSON.parse(localStorage.getItem(CN_KEY)||'[]')}catch(e){return[]}}
+function saveCNs(arr){try{localStorage.setItem(CN_KEY,JSON.stringify(arr))}catch(e){}}
+
+function getCNfields(){
+  return{
+    firma:($('cn-firma')&&$('cn-firma').value)||'',
+    ico:($('cn-ico')&&$('cn-ico').value)||'',
+    akce:($('cn-akce')&&$('cn-akce').value)||'',
+    datum:($('cn-datum')&&$('cn-datum').value)||new Date().toISOString().slice(0,10),
+    platnost:($('cn-platnost')&&$('cn-platnost').value)||30,
+    sleva:($('cn-sleva')&&$('cn-sleva').value)||0,
+  };
+}
+
+function saveCN(){
+  const f=getCNfields();
+  const title=(f.firma||f.akce||'Bez názvu')+' · '+f.datum.split('-').reverse().join('.');
+  const o={id:cnId||Date.now()+'',title,fields:f,selMat:cnSelMat,selPrace:cnSelPrace,custMat:cnCustMat,custPrace:_cnCustPrace,saved:new Date().toISOString()};
+  cnId=o.id;
+  const arr=CNs().filter(x=>x.id!==o.id);
+  arr.unshift(o);
+  saveCNs(arr.slice(0,50));
+  return o;
+}
+
+function loadCN(o){
+  cnId=o.id;
+  cnSelMat=o.selMat||{};cnSelPrace=o.selPrace||{};cnCustMat=o.custMat||[];_cnCustPrace=o.custPrace||[];
+  renderCN(o.fields);
+}
+
+function renderCNlist(){
+  const arr=CNs();
+  if(!arr.length)return'<div style="color:var(--mu);padding:12px">Žádné uložené nabídky.</div>';
+  return arr.map(o=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--ln)">
+    <span style="flex:1;cursor:pointer;color:#8bc34a" data-cnload="${o.id}">${esc(o.title)}</span>
+    <small style="color:var(--mu)">${o.saved?o.saved.slice(0,10):''}</small>
+    <button class="b s" data-cndel="${o.id}" style="background:#c62828;padding:4px 8px;font-size:11px">✕</button>
   </div>`).join('');
-  // Práce
-  const praceRows=D_prace.map((x,i)=>{
-    const s=cnSelPrace[i]||{};
-    const on=s.on||false;
-    const q=s.q!=null?s.q:x.q||1;
-    const p=s.p!=null?s.p:x.p||0;
-    return `<div class="it ${on?'':'off'}" data-cni="${i}" data-cnt="prace">
-      <input type="checkbox" class="o" ${on?'checked':''}>
-      <span><b>${esc(x.n)}</b><small>${x.s||''}</small></span>
-      <input type="number" class="q" value="${q}" min="0" step="0.01">
-      <span class="u">${x.u||'ks'}</span>
-      <input type="number" class="p" value="${p}" min="0" step="1">
-    </div>`;
-  }).join('');
-  const custPraceRows=cnCustPrace.map((x,i)=>`<div class="it ${x.on?'':'off'}" data-cni="${i}" data-cnt="custprace">
-    <input type="checkbox" class="o" ${x.on?'checked':''}>
-    <input type="text" class="n" value="${esc(x.n)}" placeholder="Název">
-    <input type="number" class="q" value="${x.q||1}" min="0" step="0.01">
-    <input type="text" class="u" value="${esc(x.u||'ks')}" style="width:50px">
-    <input type="number" class="p" value="${x.p||0}" min="0" step="1">
-  </div>`).join('');
+}
+
+function renderCN(prefill){
+  const sleva=(+(prefill?prefill.sleva:($('cn-sleva')&&$('cn-sleva').value))||0)/100;
+  const fFirma=prefill?prefill.firma:($('cn-firma')&&$('cn-firma').value||V('firma')||'');
+  const fIco=prefill?prefill.ico:($('cn-ico')&&$('cn-ico').value||V('ico')||'');
+  const fAkce=prefill?prefill.akce:($('cn-akce')&&$('cn-akce').value||V('akce')||'');
+  const fDatum=prefill?prefill.datum:(($('cn-datum')&&$('cn-datum').value)||new Date().toISOString().slice(0,10));
+  const fPlatnost=prefill?prefill.platnost:(($('cn-platnost')&&$('cn-platnost').value)||30);
 
   // Totals
   const tMat=[...D_mat.map((x,i)=>({...x,...(cnSelMat[i]||{})})).filter((_,i)=>cnSelMat[i]&&cnSelMat[i].on),...cnCustMat.filter(c=>c.on)].reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
-  const tPraceRaw=[...D_prace.map((x,i)=>({...x,...(cnSelPrace[i]||{})})).filter((_,i)=>cnSelPrace[i]&&cnSelPrace[i].on),...cnCustPrace.filter(c=>c.on)].reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
+  const tPraceRaw=[...D_prace.map((x,i)=>({...x,...(cnSelPrace[i]||{})})).filter((_,i)=>cnSelPrace[i]&&cnSelPrace[i].on),..._cnCustPrace.filter(c=>c.on)].reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
   const tPrace=tPraceRaw*(1-sleva);
   const tAll=tMat+tPrace;
+
+  // Rows for mat
+  const matRows=D_mat.map((x,i)=>{
+    const s=cnSelMat[i]||{};const on=s.on||false;
+    const q=s.q!=null?s.q:(x.q||1);const p=s.p!=null?s.p:(x.p||0);
+    return `<div class="it ${on?'':'off'}" data-cni="${i}" data-cnt="mat">
+      <input type="checkbox" class="o" ${on?'checked':''}><span><b>${esc(x.n)}</b><small>${x.s||''}</small></span>
+      <input type="number" class="q" value="${q}" min="0" step="0.01"><span class="u">${x.u||'ks'}</span>
+      <input type="number" class="p" value="${p}" min="0" step="1"></div>`;
+  }).join('');
+  const custMatRows=cnCustMat.map((x,i)=>`<div class="it ${x.on?'':'off'}" data-cni="${i}" data-cnt="custmat">
+    <input type="checkbox" class="o" ${x.on?'checked':''}><input type="text" class="n" value="${esc(x.n)}" placeholder="Název">
+    <input type="number" class="q" value="${x.q||1}" min="0" step="0.01"><input type="text" class="u" value="${esc(x.u||'ks')}" style="width:50px">
+    <input type="number" class="p" value="${x.p||0}" min="0" step="1"></div>`).join('');
+  // Rows for prace
+  const praceRows=D_prace.map((x,i)=>{
+    const s=cnSelPrace[i]||{};const on=s.on||false;
+    const q=s.q!=null?s.q:(x.q||1);const p=s.p!=null?s.p:(x.p||0);
+    return `<div class="it ${on?'':'off'}" data-cni="${i}" data-cnt="prace">
+      <input type="checkbox" class="o" ${on?'checked':''}><span><b>${esc(x.n)}</b><small>${x.s||''}</small></span>
+      <input type="number" class="q" value="${q}" min="0" step="0.01"><span class="u">${x.u||'ks'}</span>
+      <input type="number" class="p" value="${p}" min="0" step="1"></div>`;
+  }).join('');
+  const custPraceRows=_cnCustPrace.map((x,i)=>`<div class="it ${x.on?'':'off'}" data-cni="${i}" data-cnt="custprace">
+    <input type="checkbox" class="o" ${x.on?'checked':''}><input type="text" class="n" value="${esc(x.n)}" placeholder="Název">
+    <input type="number" class="q" value="${x.q||1}" min="0" step="0.01"><input type="text" class="u" value="${esc(x.u||'ks')}" style="width:50px">
+    <input type="number" class="p" value="${x.p||0}" min="0" step="1"></div>`).join('');
 
   $('cn-panel').innerHTML=`
   <div style="background:var(--bg2);border:1px solid var(--ln);border-radius:8px;padding:16px;margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <b style="font-size:16px;color:#8bc34a">📋 Cenová nabídka</b>
-      <button class="b s" id="cn-close" style="background:#555">✕ Zavřít</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="b" id="cn-save-btn" style="background:#1b5e20;padding:6px 14px">💾 Uložit nabídku</button>
+        <button class="b s" id="cn-list-btn" style="padding:6px 14px">📂 Uložené nabídky</button>
+        <button class="b s" id="cn-new-btn" style="padding:6px 14px;background:#333">+ Nová</button>
+        <button class="b s" id="cn-close" style="background:#555">✕ Zavřít</button>
+      </div>
+    </div>
+
+    <!-- Uložené nabídky -->
+    <div id="cn-list-panel" style="display:none;background:var(--bg);border:1px solid var(--ln);border-radius:6px;padding:12px;margin-bottom:12px">
+      <b style="color:var(--mu);font-size:12px">ULOŽENÉ NABÍDKY</b>
+      <div id="cn-list-rows" style="margin-top:8px">${renderCNlist()}</div>
+    </div>
+
+    <!-- Firma vyhledávání -->
+    <div style="margin-bottom:16px">
+      <label style="color:var(--mu);font-size:12px">Vyhledat zákazníka</label>
+      <input id="cn-search" type="text" placeholder="Zadejte název firmy..." value="${esc(fFirma)}"
+        style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg);margin-top:4px">
+      <div id="cn-search-res" style="background:var(--bg2);border:1px solid var(--ln);border-radius:4px;margin-top:2px;display:none;max-height:180px;overflow-y:auto"></div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div><label style="color:var(--mu);font-size:12px">Zákazník / firma</label>
-        <input id="cn-firma" data-cnk="firma" type="text" value="${esc($('cn-panel').dataset.firma||V('firma')||'')}" placeholder="Název firmy" style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
+        <input id="cn-firma" data-cnk="firma" type="text" value="${esc(fFirma)}" placeholder="Název firmy"
+          style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
       <div><label style="color:var(--mu);font-size:12px">IČ</label>
-        <input id="cn-ico" data-cnk="ico" type="text" value="${esc($('cn-panel').dataset.ico||V('ico')||'')}" placeholder="IČ" style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
+        <input id="cn-ico" data-cnk="ico" type="text" value="${esc(fIco)}" placeholder="IČ"
+          style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
       <div style="grid-column:1/-1"><label style="color:var(--mu);font-size:12px">Stavba / akce</label>
-        <input id="cn-akce" data-cnk="akce" type="text" value="${esc($('cn-panel').dataset.akce||V('akce')||'')}" placeholder="Popis stavby" style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
+        <input id="cn-akce" data-cnk="akce" type="text" value="${esc(fAkce)}" placeholder="Popis stavby"
+          style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
       <div><label style="color:var(--mu);font-size:12px">Datum nabídky</label>
-        <input id="cn-datum" data-cnk="datum" type="date" value="${$('cn-panel').dataset.datum||new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
+        <input id="cn-datum" data-cnk="datum" type="date" value="${fDatum}"
+          style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
       <div><label style="color:var(--mu);font-size:12px">Platnost nabídky (dní)</label>
-        <input id="cn-platnost" data-cnk="platnost" type="number" value="${$('cn-panel').dataset.platnost||30}" min="1" style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
+        <input id="cn-platnost" data-cnk="platnost" type="number" value="${fPlatnost}" min="1"
+          style="width:100%;padding:8px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"></div>
     </div>
 
     <h3 style="color:#81d4fa;margin:12px 0 6px">Materiál</h3>
@@ -669,7 +727,9 @@ function renderCN(){
 
     <h3 style="color:#a5d6a7;margin:16px 0 6px">Práce</h3>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
-      <label style="color:var(--mu);font-size:12px">Sleva na práce: <input id="cn-sleva" type="number" value="${Math.round(sleva*100)}" min="0" max="100" step="1" style="width:60px;padding:4px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"> %</label>
+      <label style="color:var(--mu);font-size:12px">Sleva na práce:
+        <input id="cn-sleva" type="number" value="${Math.round(sleva*100)}" min="0" max="100" step="1"
+          style="width:60px;padding:4px;border:1px solid var(--ln);border-radius:4px;background:var(--bg);color:var(--fg)"> %</label>
     </div>
     <div id="cn-items-prace" style="margin-bottom:8px">${praceRows}${custPraceRows}</div>
     <button class="b s" id="cn-add-prace" style="font-size:12px;padding:6px 12px;background:#2e7d32">+ Vlastní položka práce</button>
@@ -681,37 +741,61 @@ function renderCN(){
       ${tAll>0?`<div style="font-size:18px;font-weight:bold;margin-top:8px;border-top:1px solid var(--ln);padding-top:8px">CELKEM bez DPH: ${cz(tAll)} Kč</div>`:''}
       ${tAll>0?`<div style="color:var(--mu);font-size:12px">Cena včetně DPH 21%: ${cz(Math.round(tAll*1.21))} Kč</div>`:''}
     </div>
-
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="b" id="cn-pdf" style="background:#1b5e20">⬇ Stáhnout PDF nabídky</button>
     </div>
   </div>`;
 
-  // Re-attach events after render
+  // Events
   $('cn-close').onclick=()=>{$('cn-panel').style.display='none'};
+  $('cn-new-btn').onclick=()=>{cnId=null;cnSelMat={};cnSelPrace={};cnCustMat=[];_cnCustPrace=[];renderCN()};
+  $('cn-save-btn').onclick=()=>{saveCN();jmsg('Nabídka uložena ✓');renderCN();};
+  $('cn-list-btn').onclick=()=>{
+    const lp=$('cn-list-panel');
+    lp.style.display=lp.style.display==='none'?'block':'none';
+    $('cn-list-rows').innerHTML=renderCNlist();
+  };
+  $('cn-list-rows').onclick=e=>{
+    const load=e.target.closest('[data-cnload]');
+    const del=e.target.closest('[data-cndel]');
+    if(load){const o=CNs().find(x=>x.id===load.dataset.cnload);if(o)loadCN(o);}
+    if(del){if(confirm('Smazat nabídku?')){saveCNs(CNs().filter(x=>x.id!==del.dataset.cndel));$('cn-list-rows').innerHTML=renderCNlist();}}
+  };
+
+  // Firma search
+  const searchEl=$('cn-search');const resEl=$('cn-search-res');
+  function doSearch(q){
+    if(!q||q.length<2){resEl.style.display='none';return;}
+    const ql=q.toLowerCase();
+    const hits=CL_DB.filter(r=>r[0].toLowerCase().includes(ql)).slice(0,12);
+    if(!hits.length){resEl.style.display='none';return;}
+    resEl.innerHTML=hits.map(r=>`<div style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--ln)" data-cf="${esc(r[0])}" data-ci="${esc(r[1])}">${esc(r[0])}<small style="color:var(--mu);margin-left:8px">${r[1]?'IČ '+r[1]:''}</small></div>`).join('');
+    resEl.style.display='block';
+  }
+  searchEl.oninput=()=>doSearch(searchEl.value);
+  resEl.onclick=e=>{
+    const row=e.target.closest('[data-cf]');if(!row)return;
+    $('cn-firma').value=row.dataset.cf;
+    $('cn-ico').value=row.dataset.ci||'';
+    searchEl.value=row.dataset.cf;
+    resEl.style.display='none';
+  };
+  document.addEventListener('click',e=>{if(!resEl.contains(e.target)&&e.target!==searchEl)resEl.style.display='none';},{once:false,capture:false});
+
   $('cn-add-mat').onclick=()=>{cnCustMat.push({n:'',u:'ks',q:1,p:0,on:true});renderCN()};
-  $('cn-add-prace').onclick=()=>{cnCustPrace.push({n:'',u:'ks',q:1,p:0,on:true});renderCN()};
+  $('cn-add-prace').onclick=()=>{_cnCustPrace.push({n:'',u:'ks',q:1,p:0,on:true});renderCN()};
   $('cn-sleva').oninput=()=>renderCN();
 
-  // Save field values on change
-  ['cn-firma','cn-ico','cn-akce','cn-datum','cn-platnost'].forEach(id=>{
-    const el=$(id);if(!el)return;
-    el.oninput=()=>{const k=el.dataset.cnk||id.replace('cn-','');$('cn-panel').dataset[k]=el.value;};
-  });
-
-  // Items events
   $('cn-items-mat').addEventListener('change',e=>{
     const it=e.target.closest('[data-cni]');if(!it)return;
     const i=+it.dataset.cni,t=it.dataset.cnt,v=e.target;
-    if(t==='mat'){const s=cnSelMat[i]=cnSelMat[i]||{q:D_mat[i].q||1,p:D_mat[i].p||0};
-      if(v.classList.contains('o')){s.on=v.checked;}
+    if(t==='mat'){const s=cnSelMat[i]=cnSelMat[i]||{q:+D_mat[i].q||1,p:+D_mat[i].p||0};
+      if(v.classList.contains('o'))s.on=v.checked;
       else if(v.classList.contains('q'))s.q=+v.value;
       else if(v.classList.contains('p'))s.p=+v.value;
     }else{const x=cnCustMat[i];
-      if(v.classList.contains('o'))x.on=v.checked;
-      else if(v.classList.contains('q'))x.q=+v.value;
-      else if(v.classList.contains('p'))x.p=+v.value;
-      else if(v.classList.contains('n'))x.n=v.value;
+      if(v.classList.contains('o'))x.on=v.checked;else if(v.classList.contains('q'))x.q=+v.value;
+      else if(v.classList.contains('p'))x.p=+v.value;else if(v.classList.contains('n'))x.n=v.value;
       else if(v.classList.contains('u'))x.u=v.value;
     }
     renderCN();
@@ -719,15 +803,13 @@ function renderCN(){
   $('cn-items-prace').addEventListener('change',e=>{
     const it=e.target.closest('[data-cni]');if(!it)return;
     const i=+it.dataset.cni,t=it.dataset.cnt,v=e.target;
-    if(t==='prace'){const s=cnSelPrace[i]=cnSelPrace[i]||{q:D_prace[i].q||1,p:D_prace[i].p||0};
-      if(v.classList.contains('o')){s.on=v.checked;}
+    if(t==='prace'){const s=cnSelPrace[i]=cnSelPrace[i]||{q:+D_prace[i].q||1,p:+D_prace[i].p||0};
+      if(v.classList.contains('o'))s.on=v.checked;
       else if(v.classList.contains('q'))s.q=+v.value;
       else if(v.classList.contains('p'))s.p=+v.value;
-    }else{const x=cnCustPrace[i];
-      if(v.classList.contains('o'))x.on=v.checked;
-      else if(v.classList.contains('q'))x.q=+v.value;
-      else if(v.classList.contains('p'))x.p=+v.value;
-      else if(v.classList.contains('n'))x.n=v.value;
+    }else{const x=_cnCustPrace[i];
+      if(v.classList.contains('o'))x.on=v.checked;else if(v.classList.contains('q'))x.q=+v.value;
+      else if(v.classList.contains('p'))x.p=+v.value;else if(v.classList.contains('n'))x.n=v.value;
       else if(v.classList.contains('u'))x.u=v.value;
     }
     renderCN();
@@ -738,162 +820,6 @@ function renderCN(){
     try{await buildCNpdf();}catch(e){alert('Chyba: '+e.message);}
     btn.disabled=false;btn.textContent='⬇ Stáhnout PDF nabídky';
   };
-}
-
-async function buildCNpdf(){
-  const sleva=(+($('cn-sleva')&&$('cn-sleva').value)||0)/100;
-  const firma=($('cn-firma')&&$('cn-firma').value)||$('cn-panel').dataset.firma||V('firma')||'';
-  const ico=($('cn-ico')&&$('cn-ico').value)||V('ico')||'';
-  const akce=($('cn-akce')&&$('cn-akce').value)||$('cn-panel').dataset.akce||V('akce')||'';
-  const datum=($('cn-datum')&&$('cn-datum').value)||new Date().toISOString().slice(0,10);
-  const platnost=($('cn-platnost')&&$('cn-platnost').value)||30;
-  const datumFmt=datum.split('-').reverse().join('.');
-  const platnostDo=new Date(datum);platnostDo.setDate(platnostDo.getDate()+(+platnost));
-  const platnostFmt=platnostDo.toLocaleDateString('cs-CZ');
-
-  const matItems=[...D_mat.map((x,i)=>({...x,...(cnSelMat[i]||{})})).filter((_,i)=>cnSelMat[i]&&cnSelMat[i].on),...cnCustMat.filter(c=>c.on)];
-  const praceRaw=[...D_prace.map((x,i)=>({...x,...(cnSelPrace[i]||{})})).filter((_,i)=>cnSelPrace[i]&&cnSelPrace[i].on),...cnCustPrace.filter(c=>c.on)];
-  const tMat=matItems.reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
-  const tPraceRaw=praceRaw.reduce((a,x)=>a+(+x.q||0)*(+x.p||0),0);
-  const tPrace=tPraceRaw*(1-sleva);
-  const tAll=tMat+tPrace;
-
-  function rowsHtml(items,bg,withSleva){
-    return items.map(x=>{
-      const cena=(+x.q||0)*(+x.p||0)*(withSleva?(1-sleva):1);
-      return `<tr style="border-bottom:1px solid #eee">
-        <td style="padding:5px 8px">${esc(x.n)}</td>
-        <td style="padding:5px 8px;text-align:center">${esc(x.u||'')}</td>
-        <td style="padding:5px 8px;text-align:right">${cz(+x.q||0)}</td>
-        <td style="padding:5px 8px;text-align:right">${cz((+x.p||0)*(withSleva?(1-sleva):1))} Kč</td>
-        <td style="padding:5px 8px;text-align:right;font-weight:bold">${cz(cena)} Kč</td>
-      </tr>`;
-    }).join('');
-  }
-
-  const html=`<div style="font-family:Arial,sans-serif;font-size:11px;color:#111;width:794px;padding:32px 40px;box-sizing:border-box;background:#fff">
-    <!-- Hlavička -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:3px solid #1565c0;padding-bottom:16px">
-      <div>
-        <div style="font-size:22px;font-weight:bold;color:#1565c0;letter-spacing:1px">CENOVÁ NABÍDKA</div>
-        <div style="color:#555;margin-top:4px">č. ${datumFmt.replace(/\./g,'')}${firma.slice(0,4).toUpperCase().replace(/\s/g,'')}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-weight:bold;font-size:13px">TURTO s.r.o.</div>
-        <div style="color:#555">Kaprova 42/14, 110 00 Praha 1</div>
-        <div style="color:#555">IČ: 24196231 &nbsp; DIČ: CZ24196231</div>
-        <div style="color:#555">Ing. Milan Soukup · 773 576 510</div>
-      </div>
-    </div>
-
-    <!-- Info -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div style="background:#f5f7fa;border-radius:6px;padding:12px">
-        <div style="font-weight:bold;color:#1565c0;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Odběratel</div>
-        <div style="font-weight:bold;font-size:13px">${esc(firma)}</div>
-        ${ico?`<div style="color:#555">IČ: ${esc(ico)}</div>`:''}
-      </div>
-      <div style="background:#f5f7fa;border-radius:6px;padding:12px">
-        <div style="font-weight:bold;color:#1565c0;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Stavba / akce</div>
-        <div style="font-weight:bold">${esc(akce)}</div>
-        <div style="color:#555;margin-top:8px">Datum nabídky: <b>${datumFmt}</b></div>
-        <div style="color:#555">Platnost do: <b>${platnostFmt}</b></div>
-      </div>
-    </div>
-
-    ${matItems.length?`
-    <!-- Materiál -->
-    <div style="font-weight:bold;font-size:12px;color:#fff;background:#1565c0;padding:6px 10px;border-radius:4px 4px 0 0;margin-top:16px">Materiál</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:0">
-      <thead><tr style="background:#e3f2fd">
-        <th style="padding:5px 8px;text-align:left">Položka</th>
-        <th style="padding:5px 8px;text-align:center">Jedn.</th>
-        <th style="padding:5px 8px;text-align:right">Množství</th>
-        <th style="padding:5px 8px;text-align:right">Cena/j.</th>
-        <th style="padding:5px 8px;text-align:right">Celkem</th>
-      </tr></thead>
-      <tbody>${rowsHtml(matItems,'#e3f2fd',false)}</tbody>
-      <tfoot><tr style="background:#bbdefb;font-weight:bold">
-        <td colspan="4" style="padding:6px 8px;text-align:right">Materiál celkem:</td>
-        <td style="padding:6px 8px;text-align:right">${cz(tMat)} Kč</td>
-      </tr></tfoot>
-    </table>`:''}
-
-    ${praceRaw.length?`
-    <!-- Práce -->
-    <div style="font-weight:bold;font-size:12px;color:#fff;background:#2e7d32;padding:6px 10px;border-radius:4px 4px 0 0;margin-top:16px">Provedené práce</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:0">
-      <thead><tr style="background:#e8f5e9">
-        <th style="padding:5px 8px;text-align:left">Položka</th>
-        <th style="padding:5px 8px;text-align:center">Jedn.</th>
-        <th style="padding:5px 8px;text-align:right">Množství</th>
-        <th style="padding:5px 8px;text-align:right">Cena/j.${sleva>0?' (po slevě)':''}</th>
-        <th style="padding:5px 8px;text-align:right">Celkem</th>
-      </tr></thead>
-      <tbody>${rowsHtml(praceRaw,'#e8f5e9',true)}</tbody>
-      <tfoot>
-        ${sleva>0?`<tr style="background:#fff9c4"><td colspan="4" style="padding:5px 8px;text-align:right;color:#888">Práce bez slevy:</td><td style="padding:5px 8px;text-align:right;color:#888">${cz(tPraceRaw)} Kč</td></tr>
-        <tr style="background:#ffe0b2"><td colspan="4" style="padding:5px 8px;text-align:right;color:#e65100">Sleva ${Math.round(sleva*100)}%:</td><td style="padding:5px 8px;text-align:right;color:#e65100">- ${cz(tPraceRaw-tPrace)} Kč</td></tr>`:''}
-        <tr style="background:#c8e6c9;font-weight:bold"><td colspan="4" style="padding:6px 8px;text-align:right">Práce celkem:</td><td style="padding:6px 8px;text-align:right">${cz(tPrace)} Kč</td></tr>
-      </tfoot>
-    </table>`:''}
-
-    <!-- Celkem -->
-    <div style="margin-top:16px;border-top:2px solid #1565c0;padding-top:12px">
-      <table style="width:100%;border-collapse:collapse">
-        <tr><td style="padding:4px 8px;font-size:14px;font-weight:bold">CELKEM bez DPH:</td><td style="padding:4px 8px;text-align:right;font-size:14px;font-weight:bold">${cz(tAll)} Kč</td></tr>
-        <tr style="color:#555"><td style="padding:4px 8px">DPH 21%:</td><td style="padding:4px 8px;text-align:right">${cz(Math.round(tAll*0.21))} Kč</td></tr>
-        <tr style="background:#1565c0;color:#fff;font-size:15px;font-weight:bold"><td style="padding:8px">CELKEM vč. DPH:</td><td style="padding:8px;text-align:right">${cz(Math.round(tAll*1.21))} Kč</td></tr>
-      </table>
-    </div>
-
-    <!-- Poznámka -->
-    <div style="margin-top:20px;padding:10px;background:#f9f9f9;border-left:3px solid #1565c0;font-size:10px;color:#555">
-      Nabídka je platná do ${platnostFmt}. Ceny jsou uvedeny bez DPH, není-li uvedeno jinak. Nabídka se vztahuje na výše specifikované práce a materiál.
-    </div>
-
-    <!-- Podpis -->
-    <div style="margin-top:28px;display:flex;justify-content:space-between">
-      <div style="text-align:center;width:220px">
-        <div style="border-bottom:1px solid #333;margin-bottom:4px;height:50px"></div>
-        <div style="font-size:10px;color:#555">Za TURTO s.r.o. · Ing. Milan Soukup</div>
-      </div>
-      <div style="text-align:center;width:220px">
-        <div style="border-bottom:1px solid #333;margin-bottom:4px;height:50px"></div>
-        <div style="font-size:10px;color:#555">Za odběratele · datum, razítko</div>
-      </div>
-    </div>
-  </div>`;
-
-  const div=document.createElement('div');
-  div.style.cssText='position:absolute;left:-9999px;top:0';
-  div.innerHTML=html;
-  document.body.appendChild(div);
-  const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});
-  const c=await html2canvas(div,{scale:3,backgroundColor:'#fff',useCORS:true,logging:false,width:794,windowWidth:874});
-  const iw=794,ih=div.offsetHeight;
-  const ratio=210/iw;
-  const pdfH=ih*ratio;
-  if(pdfH<=297){
-    pdf.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,Math.min(pdfH,297));
-  }else{
-    // Multi-page
-    const pageH=297/ratio;
-    let pages2=Math.ceil(ih/pageH);
-    for(let p2=0;p2<pages2;p2++){
-      if(p2)pdf.addPage();
-      const canvas2=document.createElement('canvas');
-      canvas2.width=c.width;
-      const sliceH=Math.round(pageH*(c.height/ih));
-      canvas2.height=sliceH;
-      const ctx2=canvas2.getContext('2d');
-      ctx2.drawImage(c,0,p2*sliceH,c.width,sliceH,0,0,c.width,sliceH);
-      pdf.addImage(canvas2.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);
-    }
-  }
-  document.body.removeChild(div);
-  const nm='Nabidka-'+(firma||akce||'TURTO').replace(/[/\\:*?"<>|]+/g,'').slice(0,60)+'-'+datumFmt+'.pdf';
-  pdf.save(nm);
 }
 
 $('jcn').onclick=()=>{
