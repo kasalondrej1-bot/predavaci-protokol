@@ -162,7 +162,7 @@ function getClients(){
 }
 const tabs=['Zákazník','Zakázka','Materiál','Práce','Fotky','Podpisy'];
 $('nav').innerHTML=tabs.map((t,i)=>`<button data-t="${i}">${t}</button>`).join('');
-function go(n){cur=Math.max(0,Math.min(tabs.length-1,n));document.querySelectorAll('main .sec').forEach((e,i)=>e.classList.toggle('on',i==cur));document.querySelectorAll('nav button').forEach((e,i)=>e.classList.toggle('on',i==cur));$('pv').style.visibility=cur?'visible':'hidden';$('nx').style.display=cur<tabs.length-1?'':'none';scrollTo(0,0)}
+function go(n){cur=Math.max(0,Math.min(tabs.length-1,n));const cp=$('cn-panel');if(cp)cp.style.display='none';document.querySelectorAll('main .sec').forEach((e,i)=>e.classList.toggle('on',i==cur));document.querySelectorAll('nav button').forEach((e,i)=>e.classList.toggle('on',i==cur));$('pv').style.visibility=cur?'visible':'hidden';$('nx').style.display=cur<tabs.length-1?'':'none';scrollTo(0,0)}
 $('nav').onclick=e=>e.target.dataset.t&&go(+e.target.dataset.t);$('pv').onclick=()=>go(cur-1);$('nx').onclick=()=>go(cur+1);
 const radios=(id,n,a)=>$(id).innerHTML=a.map(x=>`<label><input type="radio" name="${n}" value="${x}">${x}</label>`).join('');
 radios('ready','ready',['Připraveno','Připraveno s omezením','Nepřipraveno']);radios('done','done',['Provedeno v plánovaném rozsahu','Provedeno částečně','Neprovedeno']);
