@@ -513,7 +513,7 @@ function renderJobList(){
 
 $('jo').onclick=()=>{if(getRole()==='prace')return;const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
-async function loadJ(j){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};dopPvc=j.dopPvc||{};dopInj=j.dopInj||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0)}
+async function loadJ(j,noNav){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};dopPvc=j.dopPvc||{};dopInj=j.dopInj||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();if(!noNav){$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0);}}
 $('jl').onclick=async e=>{
   const zuct=e.target.closest('[data-zuct]');
   if(zuct){
@@ -528,11 +528,12 @@ $('jl').onclick=async e=>{
         // Turto: PDF s cenami bez tabulky rozdělení zisku
         const savedSelMat2=selMat,savedSelPrace2=selPrace,savedCustMat2=custMat,savedCustPrace2=custPrace,savedPhotos2=photos,savedK2={};
         K.forEach(e=>{savedK2[e.dataset.k]=e.value});
-        await loadJ(j);
+        await loadJ(j,true);
         pdfObj=await buildPdf(true);
         // Obnovit původní stav
         K.forEach(e=>{if(savedK2[e.dataset.k]!=null)e.value=savedK2[e.dataset.k]});
         selMat=savedSelMat2;selPrace=savedSelPrace2;custMat=savedCustMat2;custPrace=savedCustPrace2;photos=savedPhotos2;
+        $('jl').style.display='';
         nm='Protokol-'+[datum,firma].filter(Boolean).join('-').replace(/[/\\:*?"<>|]+/g,'').slice(0,80)+'.pdf';
       }else{
         pdfObj=await buildZuctovani(j);
@@ -614,7 +615,7 @@ if(hasI){
     const last=i+PG>=allRows.length;
     const zuct=last&&PR&&getRole()!=='turto'?buildZuctovaniHtml(null):'';
     const tbody=chunk.map(r=>r.hdr?secHdr(r.label,r.color):rowHtml(r.item,r.item===pracI[0]||r.item===matI[0]?'':r.bg)).join('');
-    P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${tbody}</tbody>${last&&PR?`<tfoot>${pracI.length?`<tr style="background:#dbeafe"><td colspan="${PR?4:2}" class="n">Práce celkem bez DPH</td><td class="n">${fm(tPrac)} Kč</td></tr>`:''}${matI.length?`<tr style="background:#dcfce7"><td colspan="${PR?4:2}" class="n">Materiál celkem bez DPH</td><td class="n">${fm(tMat)} Kč</td></tr>`:''}${matI.length&&pracI.length?`<tr style="background:#e0e0e0;font-weight:bold"><td colspan="${PR?4:2}" class="n">CELKEM bez DPH</td><td class="n">${fm(tAll)} Kč</td></tr>`:''}</tfoot>`:''}</table>${zuct}`));
+    P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${tbody}</tbody>${last&&PR?`<tfoot>${pracI.length?`<tr style="background:#dbeafe"><td colspan="${PR?4:2}" class="n">Práce celkem</td><td class="n">${fm(tPrac)} Kč</td></tr>`:''}${matI.length?`<tr style="background:#dcfce7"><td colspan="${PR?4:2}" class="n">Materiál celkem</td><td class="n">${fm(tMat)} Kč</td></tr>`:''}${matI.length&&pracI.length?`<tr style="background:#e0e0e0;font-weight:bold"><td colspan="${PR?4:2}" class="n">CELKEM</td><td class="n">${fm(tAll)} Kč</td></tr>`:''}</tfoot>`:''}</table>${zuct}`));
   }
 }
 const n=Math.max(1,Math.ceil(photos.length/4));
