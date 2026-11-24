@@ -374,7 +374,7 @@ async function sbLoad(){
 async function sbDelete(id){try{await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data:{id,deleted:true,ts:Date.now()},updated_at:new Date().toISOString()})})}catch(e){}}
 let jid=null,svT=null;const JS=()=>{try{return JSON.parse(localStorage.getItem('turtoJobs')||'[]')}catch(e){return[]}},jmsg=t=>$('jm').textContent=t;
 const fmtDatum=s=>s?s.split('-').reverse().join('.'):'';
-async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,dopPvc,dopInj,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
+async function sv(){clearTimeout(svT);svT=setTimeout(async()=>{if(!jid&&!V('akce')&&!V('firma'))return;commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',sgOdata=($('sgO').has&&$('sgO').has())?$('sgO').toDataURL('image/png'):'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,dopPvc,dopInj,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0,sgO:sgOdata},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J));jmsg('Automaticky uloženo')}catch(e){}await idb.save(oid,photos);sbSave(o,photos);},1500)}
 let J=JS();
 function fillDL(){const kSet=new Set(),tSet=new Set(),eSet=new Set();J.forEach(j=>{if(j.k){if(j.k.kontakt)kSet.add(j.k.kontakt);if(j.k.tel)tSet.add(j.k.tel);if(j.k.email)eSet.add(j.k.email)}});const dl=id=>document.getElementById(id);if(dl('dl_kontakt'))dl('dl_kontakt').innerHTML=[...kSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_tel'))dl('dl_tel').innerHTML=[...tSet].map(v=>`<option value="${esc(v)}">`).join('');if(dl('dl_email'))dl('dl_email').innerHTML=[...eSet].map(v=>`<option value="${esc(v)}">`).join('')}
 fillDL();
@@ -399,7 +399,7 @@ document.getElementById('inp_kontakt').addEventListener('change',e=>{const val=e
   if(J.length>0)jmsg('Zakázky synchronizovány ('+J.length+')');
 })();
 function renderJL(){const l=$("jl");if(l)l.innerHTML=renderJobList();}
-$('js').onclick=async()=>{commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J))}catch(e){jmsg('Uložení se nepovedlo.');return}await idb.save(oid,photos);sbSave(o,photos).then(ok=>jmsg(ok?'Uloženo a synchronizováno: '+t:'Uloženo lokálně: '+t+' (bez připojení)')).catch(()=>jmsg('Uloženo lokálně: '+t))};
+$('js').onclick=async()=>{commit();const k={};K.forEach(e=>k[e.dataset.k]=e.value);const t=(V('akce')||V('firma')||'Bez názvu')+(V('firma')&&V('akce')?' – '+V('firma'):''),oid=jid||Date.now()+'',sgOdata=($('sgO').has&&$('sgO').has())?$('sgO').toDataURL('image/png'):'',o={id:oid,t,ts:Date.now(),k,ready:rv('ready'),done:rv('done'),selMat,selPrace,dopPvc,dopInj,custMat,custPrace,photoCount:photos.length,pr:$('pr').checked,pr2:$('pr2').checked,slevaP:+($('sleva-prace')&&$('sleva-prace').value)||0,sgO:sgOdata},i=J.findIndex(x=>x.id==o.id);jid=o.id;if(i>=0)J[i]=o;else J.unshift(o);J.sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});try{localStorage.setItem('turtoJobs',JSON.stringify(J))}catch(e){jmsg('Uložení se nepovedlo.');return}await idb.save(oid,photos);sbSave(o,photos).then(ok=>jmsg(ok?'Uloženo a synchronizováno: '+t:'Uloženo lokálně: '+t+' (bez připojení)')).catch(()=>jmsg('Uloženo lokálně: '+t))};
 function renderJobList(){
   const sorted=[...J].sort((a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0});
   if(!sorted.length)return'<div class="jitem" style="padding:10px 14px;background:var(--card);border-radius:8px">Zatím žádné uložené zakázky.</div>';
@@ -521,7 +521,9 @@ function renderJobList(){
 
 $('jo').onclick=()=>{if(getRole()==='prace')return;hideCN();const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr();$('sgO').clr();drawMat();setPraceTab(_praceTab);dph()}
-async function loadJ(j,noNav){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};dopPvc=j.dopPvc||{};dopInj=j.dopInj||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;drawMat();setPraceTab(_praceTab);dph();if(!noNav){$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0);}}
+async function loadJ(j,noNav){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.value=j.k[e.dataset.k]});['ready','done'].forEach(n=>{const r=document.querySelector(`input[name=${n}][value="${j[n]}"]`);if(r)r.checked=true});K.find(e=>e.dataset.k=='informovan').dataset.man=(j.k.informovan&&j.k.informovan!==j.k.firma)?'1':'';syncR();$('usig').checked=(j.k.jmT||'Ondřej Kasal').trim()=='Ondřej Kasal';updSig();selMat=j.selMat||{};selPrace=j.selPrace||{};dopPvc=j.dopPvc||{};dopInj=j.dopInj||{};custMat=j.custMat||[];custPrace=j.custPrace||[];selPraceDop=j.selPraceDop||{pvc:{},inj:{}};if($('sleva-prace'))$('sleva-prace').value=j.slevaP||0;photos=j.photos&&j.photos.length?j.photos:await idb.load(j.id);if(photos.length)await idb.save(j.id,photos);$('pr').checked=!!j.pr;$('pr2').checked=!!j.pr2;jid=j.id;
+if(j.sgO){const img=new Image();img.onload=()=>{const c=$('sgO'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);c.has=()=>true;};img.src=j.sgO;}
+drawMat();setPraceTab(_praceTab);dph();if(!noNav){$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0);}}
 $('jl').onclick=async e=>{
   const zuct=e.target.closest('[data-zuct]');
   if(zuct){
@@ -988,57 +990,50 @@ async function buildCNpdf(){
   let tableRows='';
   if(praceItems.length){tableRows+=secHdr('Provedené práce','#1565c0');praceItems.forEach(x=>{tableRows+=rowHtml(x,'#e3f2fd');});}
   if(matItems.length){tableRows+=secHdr('Materiál','#2e7d32');matItems.forEach(x=>{tableRows+=rowHtml(x,'#e8f5e9');});}
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:11px;color:#222;background:#fff}
-    .pg{width:210mm;min-height:297mm;padding:14mm 14mm 20mm;position:relative;background:#fff}
-    .hd{display:flex;align-items:center;gap:10px;border-bottom:2px solid #1565c0;padding-bottom:8px;margin-bottom:12px}
-    .hd-logo img{width:80px;height:auto}
-    .hd-title{font-size:16px;font-weight:bold;color:#1565c0;flex:1;text-align:center;letter-spacing:1px}
-    .hd-no{font-size:10px;color:#555;text-align:right}
-    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-    .info-box{background:#f5f7fa;border-radius:5px;padding:10px}
-    .info-box .lbl{font-size:9px;font-weight:bold;color:#1565c0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
-    .info-box .val{font-size:11px}
-    .info-box .sub{font-size:10px;color:#555;margin-top:2px}
-    table{width:100%;border-collapse:collapse;margin-bottom:10px}
-    th{background:#263238;color:#fff;padding:4px 6px;font-size:10px;text-align:left}
-    th.n{text-align:right}
-    .ft{border-top:1px solid #ccc;padding-top:6px;margin-top:auto;font-size:8px;color:#777;display:flex;gap:12px}
-    .ft div{flex:1}
-    .sign-row{display:flex;gap:20px;margin-top:16px}
-    .sign-box{flex:1;border-top:1px solid #999;padding-top:4px;font-size:10px;color:#555}
-    .validity{background:#fff9c4;border:1px solid #f9a825;border-radius:4px;padding:6px 10px;font-size:10px;margin-bottom:10px}
-  </style></head><body><div class="pg">
-    <div class="hd"><div class="hd-logo">${LOGO_SVG}</div><div class="hd-title">CENOVÁ NABÍDKA</div><div class="hd-no">Datum: ${fd2(datum)}<br>Platnost: do ${fd2(platnostDatum)}</div></div>
-    <div class="info-grid">
-      <div class="info-box"><div class="lbl">Dodavatel</div><div class="val"><b>TURTO s.r.o.</b></div><div class="sub">Kaprova 42/14, 110 00 Praha 1<br>IČ: 24196231 &nbsp; DIČ: CZ24196231<br>Obchodník: Ing. Milan Soukup<br>Tel: 773 576 510</div></div>
-      <div class="info-box"><div class="lbl">Odběratel</div><div class="val"><b>${esc(firma)||'–'}</b></div><div class="sub">${ico?'IČ: '+esc(ico)+'<br>':''}${jmeno?'Kontakt: '+esc(jmeno)+'<br>':''}${tel?'Tel: '+esc(tel)+'<br>':''}</div></div>
+  const cnStyle=`<style>
+    .cn-pg *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+    .cn-pg{width:794px;min-height:1123px;padding:52px 52px 75px;background:#fff;color:#222;font-size:11px}
+    .cn-hd{display:flex;align-items:center;gap:10px;border-bottom:2px solid #1565c0;padding-bottom:8px;margin-bottom:12px}
+    .cn-hd-logo img{width:80px;height:auto}
+    .cn-hd-title{font-size:16px;font-weight:bold;color:#1565c0;flex:1;text-align:center;letter-spacing:1px}
+    .cn-hd-no{font-size:10px;color:#555;text-align:right;white-space:nowrap}
+    .cn-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .cn-box{background:#f5f7fa;border-radius:5px;padding:10px}
+    .cn-box .lbl{font-size:9px;font-weight:bold;color:#1565c0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+    .cn-box .val{font-size:11px;font-weight:bold}
+    .cn-box .sub{font-size:10px;color:#555;margin-top:2px;line-height:1.5}
+    .cn-akce{background:#e8eaf6;border-radius:4px;padding:8px 10px;margin-bottom:10px;font-size:11px}
+    .cn-tbl{width:100%;border-collapse:collapse;margin-bottom:10px}
+    .cn-tbl th{background:#263238;color:#fff;padding:4px 6px;font-size:10px;text-align:left}
+    .cn-tbl th.r{text-align:right}
+    .cn-tbl td{font-size:10px;padding:3px 6px}
+    .cn-valid{background:#fff9c4;border:1px solid #f9a825;border-radius:4px;padding:6px 10px;font-size:10px;margin-bottom:10px}
+    .cn-signs{display:flex;gap:20px;margin-top:16px}
+    .cn-sign{flex:1;border-top:1px solid #999;padding-top:4px;font-size:10px;color:#555}
+    .cn-ft{border-top:1px solid #ccc;padding-top:6px;margin-top:12px;font-size:8px;color:#777;display:flex;gap:12px}
+    .cn-ft div{flex:1}
+  </style>`;
+  const cnHtml=`${cnStyle}<div class="cn-pg">
+    <div class="cn-hd"><div class="cn-hd-logo">${LOGO_SVG}</div><div class="cn-hd-title">CENOVÁ NABÍDKA</div><div class="cn-hd-no">Datum: ${fd2(datum)}<br>Platnost do: ${fd2(platnostDatum)}</div></div>
+    <div class="cn-info">
+      <div class="cn-box"><div class="lbl">Dodavatel</div><div class="val">TURTO s.r.o.</div><div class="sub">Kaprova 42/14, 110 00 Praha 1<br>IČ: 24196231 &nbsp; DIČ: CZ24196231<br>Obchodník: Ing. Milan Soukup<br>Tel: 773 576 510</div></div>
+      <div class="cn-box"><div class="lbl">Odběratel</div><div class="val">${esc(firma)||'–'}</div><div class="sub">${ico?'IČ: '+esc(ico)+'<br>':''}${jmeno?'Kontakt: '+esc(jmeno)+'<br>':''}${tel?'Tel: '+esc(tel)+'<br>':''}</div></div>
     </div>
-    ${akce?`<div style="background:#e8eaf6;border-radius:4px;padding:8px 10px;margin-bottom:10px;font-size:11px"><b>Akce / stavba:</b> ${esc(akce)}</div>`:''}
-    ${(praceItems.length||matItems.length)?`
-    <table>
-      <thead><tr><th>Název / popis položky</th><th class="n" style="text-align:center;width:60px">Jedn.</th><th class="n" style="width:60px">Množství</th><th class="n" style="width:80px">Cena/j.</th><th class="n" style="width:90px">Cena celkem</th></tr></thead>
-      <tbody>${tableRows}</tbody>
-      <tfoot>
-        ${praceItems.length?`<tr style="background:#dbeafe"><td colspan="4" style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">Práce celkem</td><td style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">${fm(tPrace)} Kč</td></tr>`:''}
-        ${matItems.length?`<tr style="background:#dcfce7"><td colspan="4" style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">Materiál celkem</td><td style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">${fm(tMat)} Kč</td></tr>`:''}
-        ${sleva>0?`<tr style="background:#fff9c4"><td colspan="4" style="padding:4px 6px;font-size:10px;color:#888;text-align:right">Práce bez slevy</td><td style="padding:4px 6px;font-size:10px;color:#888;text-align:right">${fm(tPraceRaw)} Kč</td></tr><tr style="background:#ffe0b2"><td colspan="4" style="padding:4px 6px;font-size:10px;color:#e65100;text-align:right">Sleva ${(sleva*100).toFixed(0)}%</td><td style="padding:4px 6px;font-size:10px;color:#e65100;text-align:right">- ${fm(tPraceRaw-tPrace)} Kč</td></tr>`:''}
-        <tr style="background:#263238"><td colspan="4" style="padding:5px 6px;font-size:11px;font-weight:bold;color:#fff;text-align:right">CELKEM bez DPH</td><td style="padding:5px 6px;font-size:12px;font-weight:bold;color:#fff;text-align:right">${fm(tAll)} Kč</td></tr>
-      </tfoot>
-    </table>
-    <div style="font-size:9px;color:#888;margin-bottom:10px">* Ceny bez DPH${sleva>0?' · Sleva na práce: '+(sleva*100).toFixed(0)+'%':''}</div>`:'<div style="color:#888;font-size:11px;padding:10px 0">Žádné položky.</div>'}
-    <div class="validity">Nabídka platí do <b>${fd2(platnostDatum)}</b>. Po tomto termínu může dojít ke změně cen.</div>
-    <div class="sign-row"><div class="sign-box">Za TURTO s.r.o.<br><br><br>Ing. Milan Soukup</div><div class="sign-box">Za objednatele<br><br><br>${esc(jmeno)||'………………………'}</div></div>
-    <div class="ft"><div><b>TURTO s.r.o.</b><br>Kaprova 42/14, 110 00 Praha 1 | IČ: 24196231</div><div>Sklad: Masarykova 234/30, 268 01 Hořovice<br>Tel: 773 576 510 | milan.soukup@turto.cz</div></div>
-  </div></body></html>`;
-  const st=$('stage');
-  st.innerHTML=html;
-  const el=st.firstElementChild;
+    ${akce?`<div class="cn-akce"><b>Akce / stavba:</b> ${esc(akce)}</div>`:''}
+    ${(praceItems.length||matItems.length)?`<table class="cn-tbl"><thead><tr><th>Název / popis položky</th><th class="r" style="width:55px">Jedn.</th><th class="r" style="width:65px">Množství</th><th class="r" style="width:80px">Cena/j.</th><th class="r" style="width:90px">Celkem</th></tr></thead><tbody>${tableRows}</tbody><tfoot>${praceItems.length?`<tr style="background:#dbeafe"><td colspan="4" style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">Práce celkem</td><td style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">${fm(tPrace)} Kč</td></tr>`:''}${matItems.length?`<tr style="background:#dcfce7"><td colspan="4" style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">Materiál celkem</td><td style="padding:4px 6px;font-size:10px;font-weight:bold;text-align:right">${fm(tMat)} Kč</td></tr>`:''}${sleva>0?`<tr style="background:#fff9c4"><td colspan="4" style="padding:4px 6px;font-size:10px;color:#888;text-align:right">Práce bez slevy</td><td style="padding:4px 6px;font-size:10px;color:#888;text-align:right">${fm(tPraceRaw)} Kč</td></tr><tr style="background:#ffe0b2"><td colspan="4" style="padding:4px 6px;font-size:10px;color:#e65100;text-align:right">Sleva ${(sleva*100).toFixed(0)}%</td><td style="padding:4px 6px;font-size:10px;color:#e65100;text-align:right">-${fm(tPraceRaw-tPrace)} Kč</td></tr>`:''}<tr style="background:#263238"><td colspan="4" style="padding:5px 6px;font-size:11px;font-weight:bold;color:#fff;text-align:right">CELKEM bez DPH</td><td style="padding:5px 6px;font-size:12px;font-weight:bold;color:#fff;text-align:right">${fm(tAll)} Kč</td></tr></tfoot></table><div style="font-size:9px;color:#888;margin-bottom:10px">* Ceny bez DPH${sleva>0?' · Sleva na práce: '+(sleva*100).toFixed(0)+'%':''}</div>`:'<div style="color:#888;font-size:11px;padding:10px 0">Žádné položky.</div>'}
+    <div class="cn-valid">Nabídka platí do <b>${fd2(platnostDatum)}</b>. Po tomto termínu může dojít ke změně cen.</div>
+    <div class="cn-signs"><div class="cn-sign">Za TURTO s.r.o.<br><br><br>Ing. Milan Soukup</div><div class="cn-sign">Za objednatele<br><br><br>${esc(jmeno)||'………………………'}</div></div>
+    <div class="cn-ft"><div><b>TURTO s.r.o.</b> | Kaprova 42/14, 110 00 Praha 1 | IČ: 24196231</div><div>Sklad: Masarykova 234/30, 268 01 Hořovice | Tel: 773 576 510 | milan.soukup@turto.cz</div></div>
+  </div>`;
+  const div=document.createElement('div');
+  div.style.cssText='position:absolute;left:-9999px;top:0;background:#fff';
+  div.innerHTML=cnHtml;
+  document.body.appendChild(div);
+  const el=div.querySelector('.cn-pg');
   const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});
   const c=await html2canvas(el,{scale:3,backgroundColor:'#fff',useCORS:true,logging:false});
   pdf.addImage(c.toDataURL('image/jpeg',1.0),'JPEG',0,0,210,297);
-  st.innerHTML='';
+  document.body.removeChild(div);
   const nm='Cenova-nabidka-'+(firma||akce||'TURTO').replace(/[^\w-]+/g,'_')+'-'+datum+'.pdf';
   pdf.save(nm);
 }
