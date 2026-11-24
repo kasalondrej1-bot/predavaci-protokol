@@ -594,7 +594,29 @@ P.push(pg(`<div class="dod-wrap"><div class="dod-col"><div class="dod-hd">DODAVA
 <h4>Provedené práce a stav při odjezdu</h4><div>${ck(['Provedeno v plánovaném rozsahu','Provedeno částečně','Neprovedeno'],rv('done'))}</div>${R('Počasí / teplota:',V('pocasi'))}
 <div style="color:#8a97a8;margin:8px 0 2px">Co, kde a v jakém množství bylo provedeno / důvod neprovedení:</div><div class="tx" style="height:190px;overflow:hidden">${esc(V('popis'))}${hasI?'\n(Soupis prací a materiálu viz následující strana.)':''}</div>
 <div style="color:#8a97a8;margin:8px 0 2px">Zbývající práce / závady / podmínky pokračování:</div><div class="tx">${esc(V('zbyva'))}</div>`));
-if(hasI){const t=L.reduce((a,x)=>a+x.q*x.p,0);for(let i=0;i<L.length;i+=17){const c=L.slice(i,i+17),last=i+17>=L.length;const zuct=last&&PR?buildZuctovaniHtml(null):'';P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${c.map(x=>`<tr><td>${esc(x.n)}</td><td class="n">${esc(x.u)}</td><td class="n">${fm(x.q)}</td>${PR?`<td class="n">${fm(x.p)} Kč</td><td class="n">${fm(x.q*x.p)} Kč</td>`:''}</tr>`).join('')}</tbody>${last&&PR?`<tfoot><tr><td colspan="4" class="n">Cena celkem bez DPH</td><td class="n">${fm(t)} Kč</td></tr></tfoot>`:''}</table>${zuct}`))}}
+if(hasI){
+  // Rozdělit na práce a materiál
+  const matI=[];const pracI=[];
+  const matNames=new Set([...D_mat.map((x,i)=>selMat[i]&&selMat[i].on?x.n:null).filter(Boolean),...custMat.filter(c=>c.on).map(c=>c.n)]);
+  L.forEach(x=>{if(matNames.has(x.n))matI.push(x);else pracI.push(x);});
+  const tPrac=pracI.reduce((a,x)=>a+x.q*x.p,0);
+  const tMat=matI.reduce((a,x)=>a+x.q*x.p,0);
+  const tAll=tPrac+tMat;
+  // Sestavit všechny řádky s barevnými hlavičkami sekcí
+  function rowHtml(x,bg){return `<tr style="${bg?'background:'+bg+';':''}" ><td>${esc(x.n)}</td><td class="n">${esc(x.u)}</td><td class="n">${fm(x.q)}</td>${PR?`<td class="n">${fm(x.p)} Kč</td><td class="n">${fm(x.q*x.p)} Kč</td>`:''}</tr>`;}
+  function secHdr(label,color){return `<tr style="background:${color};color:#fff;font-weight:bold"><td colspan="${PR?5:3}">${label}</td></tr>`;}
+  const allRows=[];
+  if(pracI.length){allRows.push({hdr:true,label:'Provedené práce',color:'#1565c0'});pracI.forEach(x=>allRows.push({item:x,bg:'#e3f2fd'}));}
+  if(matI.length){allRows.push({hdr:true,label:'Materiál',color:'#2e7d32'});matI.forEach(x=>allRows.push({item:x,bg:'#e8f5e9'}));}
+  const PG=18;
+  for(let i=0;i<allRows.length;i+=PG){
+    const chunk=allRows.slice(i,i+PG);
+    const last=i+PG>=allRows.length;
+    const zuct=last&&PR&&getRole()!=='turto'?buildZuctovaniHtml(null):'';
+    const tbody=chunk.map(r=>r.hdr?secHdr(r.label,r.color):rowHtml(r.item,r.item===pracI[0]||r.item===matI[0]?'':r.bg)).join('');
+    P.push(pg(`<div class="pg-subhd">SOUPIS PROVEDENÝCH PRACÍ A MATERIÁLU</div><table><thead><tr><th>Název / popis položky</th><th class="n">Jednotka</th><th class="n">Množství</th>${PR?'<th class="n">Cena / j.</th><th class="n">Cena celkem</th>':''}</tr></thead><tbody>${tbody}</tbody>${last&&PR?`<tfoot>${pracI.length?`<tr style="background:#dbeafe"><td colspan="${PR?4:2}" class="n">Práce celkem bez DPH</td><td class="n">${fm(tPrac)} Kč</td></tr>`:''}${matI.length?`<tr style="background:#dcfce7"><td colspan="${PR?4:2}" class="n">Materiál celkem bez DPH</td><td class="n">${fm(tMat)} Kč</td></tr>`:''}${matI.length&&pracI.length?`<tr style="background:#e0e0e0;font-weight:bold"><td colspan="${PR?4:2}" class="n">CELKEM bez DPH</td><td class="n">${fm(tAll)} Kč</td></tr>`:''}</tfoot>`:''}</table>${zuct}`));
+  }
+}
 const n=Math.max(1,Math.ceil(photos.length/4));
 for(let j=0;j<n;j++){const c=photos.slice(j*4,j*4+4),last=j==n-1;
 P.push(pg(`<h4 style="margin-top:0">Fotodokumentace montáže</h4><div class="fg">${[0,1,2,3].map(k=>{const p=c[k];return p?`<div class="c"><div class="img-wrap"><img src="${p.s}"></div><div class="cap" style="height:auto;line-height:1.3">Foto ${j*4+k+1}: ${esc(p.t)||'–'}</div></div>`:`<div class="c"><div class="ph-empty"></div></div>`}).join('')}</div>`+(last?`<h4>Potvrzení obsahu protokolu</h4><div style="color:#8a97a8">Podpisy potvrzují záznam daného dne včetně výhrad a fotografií. Počet fotografií: ${photos.length}</div>${R('Akce / číslo zakázky:',[V('akce'),V('zakazka')].filter(Boolean).join(' / '))}${R('Datum montáže:',fd(V('datum')))}<div class="two"><div><b>Za TURTO / dodavatele</b>${R('Jméno:',V('jmT'))}${R('Datum:',fd(V('datum')))}<div class="r"><b>Podpis:</b><span style="height:60px">${sg[0]?`<img src="${sg[0]}" style="height:56px">`:''}</span></div></div><div><b>Za objednatele</b>${R('Jméno a firma:',V('jmO'))}${R('Datum:',fd(V('datum')))}<div class="r"><b>Podpis:</b><span style="height:60px">${sg[1]?`<img src="${sg[1]}" style="height:56px">`:''}</span></div></div></div>`:'')))}
