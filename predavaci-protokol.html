@@ -452,6 +452,7 @@ function renderJobList(){
           else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))vicJa+=vs;else dopJa+=vs;}
           else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
           else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
+          else{vicJa+=vs;} // vlastní položky bez kategorie → vícenáklady (Ondra 100%)
         });
         const o70bez=pvcJa+injJa;
         const o70dop=o70bez+dopJa+vicJa;
@@ -471,7 +472,7 @@ function renderJobList(){
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
         const warnCell=validErr?'<span title="'+esc(validTip)+'" style="cursor:help;margin-left:4px;color:#e53935;font-size:16px">⚠️</span>':'';
-        mesRows+='<tr style="border-bottom:1px solid #ccc'+(validErr?';background:#fff3f3':'')+'"">'
+        mesRows+='<tr style="border-bottom:1px solid #ccc'+(validErr?';background:#fff3f3':'')+'">'
           +'<td style="padding:3px 6px;font-weight:bold;color:'+(hasInj?'#ce93d8':'#81d4fa')+'">'+typLabel+'</td>'+'<td style="padding:3px 6px">'+datum+'</td>'
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+warnCell+'</td>'
