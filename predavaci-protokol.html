@@ -489,9 +489,9 @@ function renderJobList(){
         }catch(e){console.warn('row err',e)}
       });
       const fakturRow=getRole()!=='turto'
-        ?'<tr><td colspan="6" style="padding:4px 6px"></td>'
+        ?'<tr><td colspan="7" style="padding:4px 6px"></td>'
           +'<td style="padding:6px;text-align:center;font-weight:bold;background:#c62828;color:#fff">K fakturaci<br>ONDRA</td>'
-          +'<td colspan="5" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM: '+cz(sumCelkBez)+' Kč</td></tr>'
+          +'<td colspan="4" style="padding:4px 6px;text-align:right;font-weight:bold;background:#388e3c;color:#fff">CELKEM: '+cz(sumCelkBez)+' Kč</td></tr>'
         :'';
       html+='<div style="overflow-x:auto;margin:8px 0 4px">'
         +'<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;background:#fff;color:#111">'
