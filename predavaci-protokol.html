@@ -457,6 +457,12 @@ function renderJobList(){
         const o70dop=o70bez+dopJa+vicJa;
         const t30bez=pvcT+injT;
         const celkBez=o70bez+t30bez;
+        // Validace: součet kategorií musí odpovídat celkové ceně
+        const kategSoucet=pvcJa+pvcT+injJa+injT+dopJa+vicJa;
+        const validErr=Math.abs(cena-kategSoucet)>1;
+        const unkItems=prAll.filter(x=>x.s&&![...PVC_C,...INJ_C,'Doprava a vícenáklady','Centrála'].includes(x.s));
+        const noSItems=prAll.filter(x=>{const vs=(+x.q||0)*(+x.p||0)*(1-((zak.slevaP||0)/100));return vs>0&&(!x.s||x.s==='');});
+        const validTip=validErr?'Chyba: Cena='+cz(cena)+' Kč, součet kategorií='+cz(kategSoucet)+' Kč, rozdíl='+cz(Math.abs(cena-kategSoucet))+' Kč'+(unkItems.length?' | Neznámé kategorie: '+unkItems.map(x=>x.n+'('+x.s+')').join(', '):'')+(noSItems.length?' | Bez kategorie: '+noSItems.map(x=>x.n||'?').join(', '):''):'';
         sumCena+=cena;sumO70bez+=o70bez;sumO70dop+=o70dop;sumT30bez+=t30bez;sumDop+=dopJa;sumVic+=vicJa;sumCelkBez+=celkBez;sumMat+=matJa;
         const datum=zak.k&&zak.k.datum?zak.k.datum.split('-').reverse().slice(0,2).join('.'):'-';
         const hasInj=prAll.some(x=>INJ_C.includes(x.s));
@@ -464,10 +470,11 @@ function renderJobList(){
         const typLabel=hasInj&&hasPvc?'PVC + INJ.':hasInj?'INJ.':'PVC';
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
-        mesRows+='<tr style="border-bottom:1px solid #ccc">'
+        const warnCell=validErr?'<span title="'+esc(validTip)+'" style="cursor:help;margin-left:4px;color:#e53935;font-size:16px">⚠️</span>':'';
+        mesRows+='<tr style="border-bottom:1px solid #ccc'+(validErr?';background:#fff3f3':'')+'"">'
           +'<td style="padding:3px 6px;font-weight:bold;color:'+(hasInj?'#ce93d8':'#81d4fa')+'">'+typLabel+'</td>'+'<td style="padding:3px 6px">'+datum+'</td>'
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
-          +'<td style="padding:3px 6px">'+esc(stavba)+'</td>'
+          +'<td style="padding:3px 6px">'+esc(stavba)+warnCell+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#bbdefb">'+(cena>0?cz(cena)+' Kč':'-')+'</td>'
           +'<td style="padding:3px 6px;text-align:right;background:#c8e6c9">'+(matJa>0?cz(matJa)+' Kč':'-')+'</td>'
           +(getRole()!=='turto'?'<td style="padding:3px 6px;text-align:right">'+(o70bez>0?cz(o70bez)+' Kč':'-')+'</td>':'')
