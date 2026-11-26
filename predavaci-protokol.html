@@ -316,7 +316,7 @@ function setPraceTab(tab){
 
 function drawPrace(){const t=$('fp').value.toLowerCase();const cats=_praceTab=='pvc'?PRACE_PVC:PRACE_INJ;const items=D_prace.filter(x=>cats.includes(x.s));let h='',last='';items.forEach((x,i)=>{const gi=D_prace.indexOf(x);if(t&&!(x.n+x.s).toLowerCase().includes(t))return;if(x.s!=last){h+=`<h3>${esc(x.s)}</h3>`;last=x.s}h+=row(x,gi,0,'prace')});if(custPrace.length)h+='<h3>Vlastní položky</h3>'+custPrace.map((x,i)=>row(x,i,1,'prace')).join('');$('items-prace').innerHTML=h;tot()}
 $('fm').oninput=drawMat;$('addc-mat').onclick=()=>{custMat.push({n:'',u:'ks',q:1,p:0,on:true});drawMat()};
-$('fp').oninput=drawPrace;if($('sleva-prace'))$('sleva-prace').oninput=tot;$('addc-prace').onclick=()=>{custPrace.push({n:'',u:'ks',q:1,p:0,on:true});drawPrace()};
+$('fp').oninput=drawPrace;if($('sleva-prace'))$('sleva-prace').oninput=tot;$('addc-prace').onclick=()=>{const defS=_praceTab==='pvc'?'PVC pásy - montáž':'Injektáže';custPrace.push({n:'',u:'ks',q:1,p:0,on:true,s:defS});drawPrace()};
 $('items-mat').addEventListener('input',e=>{const r=e.target.closest('.it');if(!r)return;const i=+r.dataset.i,c=r.dataset.c=='1',t=e.target,o=c?custMat[i]:(selMat[i]=selMat[i]||{p:D_mat[i].p});
 if(t.classList.contains('o')){o.on=t.checked;if(o.on&&!o.q)o.q=1,r.querySelector('.q').value=1;r.classList.toggle('off',!o.on)}
 else if(t.classList.contains('q')){o.q=t.value;if(t.value&&!o.on){o.on=true;r.querySelector('.o').checked=true;r.classList.remove('off')}}
@@ -452,7 +452,8 @@ function renderJobList(){
           else if(x.s==='Doprava a vícenáklady'){if(x.n&&x.n.toUpperCase().includes('VÍCENÁKLADY'))vicJa+=vs;else dopJa+=vs;}
           else if(PVC_C.includes(x.s)){pvcJa+=vs*0.7;pvcT+=vs*0.3;}
           else if(INJ_C.includes(x.s)){injJa+=vs*0.5;injT+=vs*0.5;}
-          else{vicJa+=vs;} // vlastní položky bez kategorie → vícenáklady (Ondra 100%)
+          else if(prAll.some(r=>INJ_C.includes(r.s))){injJa+=vs*0.5;injT+=vs*0.5;} // bez kategorie + INJ zakázka → 50/50
+          else{pvcJa+=vs*0.7;pvcT+=vs*0.3;} // bez kategorie + PVC zakázka → 70/30
         });
         const o70bez=pvcJa+injJa;
         const o70dop=o70bez+dopJa+vicJa;
