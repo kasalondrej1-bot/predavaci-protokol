@@ -473,7 +473,7 @@ function renderJobList(){
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
         const warnCell=validErr?'<span title="'+esc(validTip)+'" style="cursor:help;margin-left:4px;color:#e53935;font-size:16px">⚠️</span>':'';
-        mesRows+='<tr style="border-bottom:1px solid #ccc'+(validErr?';background:#fff3f3':'')+'">'
+        mesRows+='<tr data-openj="'+zak.id+'" style="border-bottom:1px solid #ccc;cursor:pointer'+(validErr?';background:#fff3f3':'')+'" title="Klikni pro otevření PDF zúčtování">'
           +'<td style="padding:3px 6px;font-weight:bold;color:'+(hasInj?'#ce93d8':'#81d4fa')+'">'+typLabel+'</td>'+'<td style="padding:3px 6px">'+datum+'</td>'
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+warnCell+'</td>'
@@ -535,6 +535,22 @@ async function loadJ(j,noNav){rst();K.forEach(e=>{if(j.k[e.dataset.k]!=null)e.va
 if(j.sgO){const img=new Image();img.onload=()=>{const c=$('sgO'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);c.has=()=>true;};img.src=j.sgO;}
 drawMat();setPraceTab(_praceTab);dph();if(!noNav){$('jl').style.display='none';jmsg('Otevřeno: '+j.t);go(0);}}
 $('jl').onclick=async e=>{
+  const openj=e.target.closest('[data-openj]');
+  if(openj&&!e.target.closest('[data-zuct],[data-pdf],[data-x],[data-o]')){
+    const j=J.find(z=>z.id==openj.dataset.openj)||JS().find(z=>z.id==openj.dataset.openj);
+    if(!j)return;
+    const orig=openj.style.background;
+    openj.style.background='#e3f2fd';
+    try{
+      const pdfObj=await buildZuctovani(j);
+      const blob=pdfObj.output('blob');
+      const url=URL.createObjectURL(blob);
+      window.open(url,'_blank');
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }catch(er){alert('Chyba PDF: '+er.message);}
+    openj.style.background=orig;
+    return;
+  }
   const zuct=e.target.closest('[data-zuct]');
   if(zuct){
     const j=J.find(z=>z.id==zuct.dataset.zuct)||JS().find(z=>z.id==zuct.dataset.zuct);
