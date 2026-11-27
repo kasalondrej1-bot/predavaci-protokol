@@ -74,7 +74,7 @@ canvas.sg{width:100%;height:170px;border:1px dashed var(--mu);border-radius:6px;
 #lock .lb{background:#c8222f;color:#fff;border:0;padding:12px 40px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;width:220px}
 #lock .lb:active{opacity:.85}
 #lock .lerr{color:#ff6b6b;font-size:14px;min-height:20px}
-</style></head><body>
+</style><style>.jitem.faktd{box-shadow:inset 4px 0 0 #43a047}tr.faktd>td:first-child{box-shadow:inset 4px 0 0 #43a047}.fkcb{width:20px;height:20px;cursor:pointer;accent-color:#43a047}</style></head><body>
 <div id="lock">
   <div class="llogo">TURTO</div>
   <h2>Předávací protokol</h2>
@@ -349,6 +349,63 @@ const idb={
 const idbReady=idb.open();
 const SB_URL='https://xwmsspcgecdvtsmmhqvq.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3bXNzcGNnZWNkdnRzbW1ocXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NDIzNDIsImV4cCI6MjEwODUxODM0Mn0.NAFic_q2ajFdoftPfYCZk57uO_T1Q6MafIxNnuBLP6w';
 const sbH={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const FK='turtoFakt',FAKT_ID='__fakt__';
+let FAKT=(()=>{try{return JSON.parse(localStorage.getItem(FK)||'{}')}catch(e){return{}}})(),faktP=Promise.resolve();
+const isFakt=id=>!!(FAKT[id]&&FAKT[id].v);
+function saveFaktLocal(){try{localStorage.setItem(FK,JSON.stringify(FAKT))}catch(e){}}
+function mergeFakt(rem){let ch=false;Object.keys(rem||{}).forEach(id=>{const r=rem[id];if(r&&(!FAKT[id]||(FAKT[id].t||0)<(r.t||0))){FAKT[id]=r;ch=true}});if(ch)saveFaktLocal();return ch}
+async function sbFaktGet(){try{const r=await fetch(SB_URL+'/rest/v1/zakazky?id=eq.'+FAKT_ID+'&select=data',{headers:sbH});if(!r.ok)return null;const a=await r.json();return(a[0]&&a[0].data&&a[0].data.fakt)||{}}catch(e){return null}}
+async function sbFaktPut(){
+  const rem=await sbFaktGet();if(rem===null)return false;
+  mergeFakt(rem);
+  try{const r=await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:FAKT_ID,data:{id:FAKT_ID,fakt:FAKT,ts:Date.now()},updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}
+}
+async function refreshFakt(){
+  const rem=await sbFaktGet();if(rem===null)return false;
+  const ch=mergeFakt(rem);
+  if(Object.keys(FAKT).some(id=>!rem[id]||(rem[id].t||0)<(FAKT[id].t||0)))faktP=faktP.then(sbFaktPut);
+  return ch;
+}
+function setFaktDom(id,v){document.querySelectorAll('input[data-fakt="'+id+'"]').forEach(cb=>{cb.checked=v;const h=cb.closest('.jitem,tr');if(h)h.classList.toggle('faktd',v)})}
+async function sbVerify(o,n){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/zakazky?id=eq.'+encodeURIComponent(o.id)+'&select=ts:data->>ts,pc:data->>photoCount,sg:data->>sgT,so:data->>sgO',{headers:sbH});
+    if(!r.ok)return null;
+    const d=(await r.json())[0];
+    if(!d)return 'zakázka v cloudu chybí';
+    if(+d.ts>o.ts)return '';
+    const bad=[];
+    if(+d.ts!==o.ts)bad.push('nová verze se nezapsala');
+    if((+d.pc||0)!==n)bad.push('fotky ('+(+d.pc||0)+' z '+n+')');
+    if((o.sgT||'').length!==(d.sg||'').length)bad.push('podpis zákazníka');
+    if((o.sgO||'').length!==(d.so||'').length)bad.push('podpis Turto');
+    return bad.join(', ');
+  }catch(e){return null}
+}
+async function checkAll(){
+  const out=$('chkOut');if(!out)return;
+  out.textContent='Kontroluji…';
+  let rem;
+  try{const r=await fetch(SB_URL+'/rest/v1/zakazky?select=id,ts:data->>ts,pc:data->>photoCount,sg:data->>sgT,so:data->>sgO,del:data->>deleted',{headers:sbH});if(!r.ok)throw 0;rem=await r.json()}
+  catch(e){out.innerHTML='<b style="color:#e53935">❌ Nepodařilo se načíst data z cloudu – kontrola neproběhla.</b>';return}
+  const rm=new Map(rem.map(x=>[x.id,x])),probs=[],nosig=[];
+  J.forEach(j=>{
+    const c=rm.get(j.id),p=[];
+    if(!c||c.del==='true')p.push('chybí v cloudu');
+    else{
+      if((+c.pc||0)<(j.photoCount||0))p.push('v cloudu je '+(+c.pc||0)+' z '+(j.photoCount||0)+' fotek');
+      if(j.sgT&&!c.sg)p.push('podpis zákazníka chybí v cloudu');
+      if(j.sgO&&!c.so)p.push('podpis Turto chybí v cloudu');
+    }
+    if(p.length)probs.push('<li><b>'+esc(j.t||j.id)+'</b> ('+fmtDatum(j.k&&j.k.datum||'')+'): '+p.join('; ')+'</li>');
+    if(!j.sgT)nosig.push(esc(j.t||j.id)+' ('+fmtDatum(j.k&&j.k.datum||'')+')');
+  });
+  const cloudOnly=rem.filter(x=>x.id!==FAKT_ID&&x.del!=='true'&&!J.some(j=>j.id===x.id)).length;
+  out.innerHTML=(probs.length?'<div style="color:#e53935"><b>⚠ Nalezeno '+probs.length+' problémů:</b><ul style="margin:4px 0 4px 18px">'+probs.join('')+'</ul>Zakázku otevři a dej Uložit.</div>':'<div style="color:#43a047"><b>✅ Všechny zakázky v tomto zařízení jsou v cloudu kompletní ('+J.length+').</b></div>')
+    +(nosig.length?'<div style="opacity:.8;margin-top:4px">Bez podpisu zákazníka ('+nosig.length+'): '+nosig.join(', ')+'</div>':'')
+    +(cloudOnly?'<div style="opacity:.8;margin-top:4px">V cloudu je ještě '+cloudOnly+' zakázek, které toto zařízení nemá.</div>':'')
+    +'<div style="opacity:.6;margin-top:4px">Zkontrolováno '+new Date().toLocaleTimeString('cs-CZ')+'</div>';
+}
 async function sbSave(o,phs){try{const r=await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:o.id,data:{...o,photos:phs||[]},updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}}
 async function sbLoad(){
   // Načteme data bez fotek (jsou příliš velké -> timeout)
@@ -369,11 +426,11 @@ async function sbLoad(){
       const d={...x.data};
       if(d.photos)d.photos=[];
       return d;
-    });
+    }).filter(d=>d&&d.id!==FAKT_ID);
   }catch(e){console.error('sbLoad exception',e);return null;}
 }
 async function sbDelete(id){try{await fetch(SB_URL+'/rest/v1/zakazky',{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data:{id,deleted:true,ts:Date.now()},updated_at:new Date().toISOString()})})}catch(e){}}
-let jid=null,svT=null;const JS=()=>{try{return JSON.parse(localStorage.getItem('turtoJobs')||'[]')}catch(e){return[]}},jmsg=t=>$('jm').textContent=t;
+let jid=null,svT=null;const JS=()=>{try{return JSON.parse(localStorage.getItem('turtoJobs')||'[]')}catch(e){return[]}},jmsg=t=>{const e=$('jm');e.textContent=t;e.style.color=/^(⚠|❌)/.test(t)?'#e53935':'';e.style.fontWeight=/^(⚠|❌)/.test(t)?'700':''};
 const fmtDatum=s=>s?s.split('-').reverse().join('.'):'';
 const byDatum=(a,b)=>{const da=a.k&&a.k.datum||'',db=b.k&&b.k.datum||'';return da>db?-1:da<db?1:0};
 let saving=false,again=false,curP=Promise.resolve(),loadingJob=false,photosIncomplete=false;
@@ -392,8 +449,11 @@ async function persistOnce(manual){
   const okL=upsertLocal(o);
   await idb.save(o.id,ph);
   if(photosIncomplete){jmsg('⚠ Fotky se nepodařilo načíst z cloudu – cloud zatím neaktualizuji (uloženo jen v zařízení)');return}
-  const okC=await sbSave(o,ph);
-  jmsg(okC?(manual?'Uloženo a synchronizováno: '+o.t:'Automaticky uloženo ✓'):(okL?'⚠ Uloženo jen v tomto zařízení – cloud se nepodařilo zasáhnout':'❌ Uložení se nepovedlo'));
+  let okC=await sbSave(o,ph),vr=okC?await sbVerify(o,ph.length):null;
+  if(okC&&vr){okC=await sbSave(o,ph);vr=okC?await sbVerify(o,ph.length):null}
+  if(!okC)jmsg(okL?'⚠ Uloženo jen v tomto zařízení – cloud se nepodařilo zasáhnout':'❌ Uložení se nepovedlo');
+  else if(vr)jmsg('⚠ KONTROLA: v cloudu se neuložilo správně: '+vr+' – zkus znovu Uložit');
+  else jmsg((manual?'Uloženo a synchronizováno: '+o.t:'Automaticky uloženo ✓')+(vr===null?' (bez ověření)':' – ověřeno v cloudu'));
 }
 function persist(manual){
   if(loadingJob)return curP;
@@ -425,7 +485,7 @@ document.getElementById('inp_kontakt').addEventListener('change',e=>{const val=e
   const remoteIds=new Set((remote||[]).map(x=>x.id));
   const remoteTs=new Map((remote||[]).map(x=>[x.id,x.ts||0]));const toUpload=remote?J.filter(x=>{const rt=remoteTs.get(x.id);return rt==null||(x.ts||0)>rt}):[];
   if(toUpload.length>0){await idbReady;await Promise.all(toUpload.map(async x=>{const ph=await idb.load(x.id);if((x.photoCount||0)>ph.length)return;await sbSave(x,ph)}))}
-  fillDL();renderJL();
+  fillDL();if(getRole()==='turto')await refreshFakt();renderJL();
   if(J.length>0)jmsg('Zakázky synchronizovány ('+J.length+')');
 })();
 function renderJL(){const l=$("jl");if(l)l.innerHTML=renderJobList();}
@@ -441,14 +501,16 @@ function renderJobList(){
     if(!groups.has(key))groups.set(key,[]);
     groups.get(key).push(x);
   });
-  let html='';
+  let html=getRole()!=='prace'?'<div style="margin-bottom:8px"><button class="b s" data-check="1">🔍 Kontrola dat</button><div id="chkOut" style="font-size:12px;margin-top:6px"></div></div>':'';
   groups.forEach((items,key)=>{
     const [yr,mo]=key.split('-');
     const label=key==='0000-00'?'Bez data':(mesice[+mo-1]||mo)+' '+yr;
     const open=key===([...groups.keys()][0]);
     html+='<details'+(open?' open':'')+' style="margin-bottom:8px"><summary style="cursor:pointer;padding:8px 14px;background:var(--nav);border-radius:8px;font-weight:600;list-style:none;display:flex;justify-content:space-between"><span>'+label+'</span><span style="font-weight:400;opacity:.6">'+items.length+' zakázek</span></summary><div style="margin-top:4px">';
     items.forEach(x=>{
-      html+='<div class="jitem" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px">'
+      const fkJ=isFakt(x.id);
+      html+='<div class="jitem'+(fkJ?' faktd':'')+'" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:10px 14px;background:var(--card);border-radius:8px">'
+        +(getRole()==='turto'?'<label title="Vyfakturováno" style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;cursor:pointer"><input type="checkbox" class="fkcb" data-fakt="'+x.id+'"'+(fkJ?' checked':'')+'>Fakt.</label>':'')
         +'<div style="flex:1;cursor:pointer" data-o="'+x.id+'"><b>'+esc(x.t||'–')+'</b><br><small style="color:var(--mu)">'+fmtDatum(x.k&&x.k.datum||'')+(x.k&&x.k.datum?' · ':'')+'<span style="opacity:.6">uloženo '+new Date(x.ts).toLocaleString('cs-CZ')+'</span></small></div>'
         +'<button class="b s" data-pdf="'+x.id+'" data-ceny="0" style="white-space:nowrap">⬇ PDF</button>'
         +'<button class="b s" data-pdf="'+x.id+'" data-ceny="1" style="white-space:nowrap;background:#2a5a2a">⬇ +ceny</button>'
@@ -502,7 +564,8 @@ function renderJobList(){
         const zakaznik=zak.k&&zak.k.firma||'-';
         const stavba=zak.k&&zak.k.akce||zak.t||'-';
         const warnCell=validErr?'<span title="'+esc(validTip)+'" style="cursor:help;margin-left:4px;color:#e53935;font-size:16px">⚠️</span>':'';
-        mesRows+='<tr data-openj="'+zak.id+'" style="border-bottom:1px solid #ccc;cursor:pointer'+(validErr?';background:#fff3f3':'')+'" title="Klikni pro otevření PDF zúčtování">'
+        mesRows+='<tr data-openj="'+zak.id+'" class="'+(isFakt(zak.id)?'faktd':'')+'" style="border-bottom:1px solid #ccc;cursor:pointer'+(validErr?';background:#fff3f3':'')+'" title="Klikni pro otevření PDF zúčtování">'
+          +(getRole()==='turto'?'<td style="padding:3px 6px;text-align:center"><input type="checkbox" class="fkcb" data-fakt="'+zak.id+'"'+(isFakt(zak.id)?' checked':'')+' title="Vyfakturováno"></td>':'')
           +'<td style="padding:3px 6px;font-weight:bold;color:'+(hasInj?'#ce93d8':'#81d4fa')+'">'+typLabel+'</td>'+'<td style="padding:3px 6px">'+datum+'</td>'
           +'<td style="padding:3px 6px">'+esc(zakaznik)+'</td>'
           +'<td style="padding:3px 6px">'+esc(stavba)+warnCell+'</td>'
@@ -525,7 +588,7 @@ function renderJobList(){
       html+='<div style="overflow-x:auto;margin:8px 0 4px">'
         +'<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;background:#fff;color:#111">'
         +'<thead><tr style="background:#1565c0;color:#fff;font-weight:bold">'
-        +'<th style="padding:4px 6px;text-align:left">Typ</th>'+'<th style="padding:4px 6px;text-align:left">Datum</th>'
+        +(getRole()==='turto'?'<th style="padding:4px 6px;text-align:center">Fakt.</th>':'')+'<th style="padding:4px 6px;text-align:left">Typ</th>'+'<th style="padding:4px 6px;text-align:left">Datum</th>'
         +'<th style="padding:4px 6px;text-align:left">Zákazník</th>'
         +'<th style="padding:4px 6px;text-align:left">Stavba</th>'
         +'<th style="padding:4px 6px;text-align:right">Cena celkem</th>'
@@ -540,7 +603,7 @@ function renderJobList(){
         +'<tbody>'+mesRows+'</tbody>'
         +'<tfoot>'
         +'<tr style="font-weight:bold;background:#e3f2fd">'
-        +'<td style="padding:4px 6px"></td>'+'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
+        +(getRole()==='turto'?'<td style="padding:4px 6px"></td>':'')+'<td style="padding:4px 6px"></td>'+'<td colspan="3" style="padding:4px 6px">cena celkem</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#bbdefb">'+cz(sumCena)+' Kč</td>'
         +'<td style="padding:4px 6px;text-align:right;background:#c8e6c9">'+cz(sumMat)+' Kč</td>'
         +(getRole()!=='turto'?'<td style="padding:4px 6px;text-align:right">'+cz(sumO70bez)+' Kč</td>':'')
@@ -558,7 +621,7 @@ function renderJobList(){
   return html;
 }
 
-$('jo').onclick=()=>{if(getRole()==='prace')return;hideCN();const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList()};
+$('jo').onclick=()=>{if(getRole()==='prace')return;hideCN();const l=$('jl');if(l.style.display=='block'){l.style.display='none';return}l.style.display='block';l.innerHTML=renderJobList();if(getRole()==='turto')refreshFakt().then(ch=>{if(ch&&l.style.display=='block')l.innerHTML=renderJobList()})};
 function rst(){K.forEach(e=>{if(!['montaznik','jmT'].includes(e.dataset.k))e.value=''});K.find(e=>e.dataset.k=='datum').value=new Date().toISOString().slice(0,10);K.find(e=>e.dataset.k=='zakazka').value=nextNo();syncR();K.find(e=>e.dataset.k=='informovan').dataset.man='';K.find(e=>e.dataset.k=='jmT').value='Ondřej Kasal';$('usig').checked=true;updSig();document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);selMat={};selPrace={};custMat=[];custPrace=[];photos=[];if($('sleva-prace'))$('sleva-prace').value=0;$('pr').checked=false;$('pr2').checked=false;$('q').value='';$('fm').value='';$('fp').value='';$('res').innerHTML='';$('out').style.display='none';$('sgT').clr(true);$('sgO').clr(true);drawMat();setPraceTab(_praceTab);dph()}
 async function applyJob(j,ph){
   rst();
@@ -606,6 +669,14 @@ async function withJob(j,fn){
 }
 $('jl').onclick=async e=>{
   const findJ=id=>J.find(z=>z.id==id)||JS().find(z=>z.id==id);
+  if(e.target.closest('[data-check]')){await checkAll();return}
+  const fc=e.target.closest('input[data-fakt]');
+  if(fc){
+    const id=fc.dataset.fakt;
+    FAKT[id]={v:fc.checked,t:Date.now()};saveFaktLocal();setFaktDom(id,fc.checked);
+    faktP=faktP.then(sbFaktPut).then(ok=>jmsg(ok?'Fakturace uložena ✓':'⚠ Fakturace uložena jen v tomto zařízení'));
+    return;
+  }
   const openj=e.target.closest('[data-openj]');
   if(openj&&!e.target.closest('[data-zuct],[data-pdf],[data-x],[data-o]')){
     const j=findJ(openj.dataset.openj);
